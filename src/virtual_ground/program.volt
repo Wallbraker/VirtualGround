@@ -27,12 +27,6 @@ public:
 	XR_MND_headless: bool;
 	XR_MND_egl_enable: bool;
 
-
-
-	instance: XrInstance;
-	systemId: XrSystemId;
-	session: XrSession;
-
 	iProfKhrSimple: XrPath;
 	iProfGoogleDaydream: XrPath;
 	iProfMndBallOnStick: XrPath;
@@ -79,6 +73,10 @@ struct OpenXR
 {
 	lib: watt.Library;
 
+	instance: XrInstance;
+	systemId: XrSystemId;
+	session: XrSession;
+
 	//! Selected blend mode.
 	blendMode: XrEnvironmentBlendMode;
 	//! Selected view config.
@@ -88,13 +86,21 @@ struct OpenXR
 	//! Config for each view.
 	viewConfigs: XrViewConfigurationView[];
 
-	swaps: Swapchain[];
+	space: XrSpace;
+
+	views: View[];
 }
 
-struct Swapchain
+struct View
 {
 	width, height: uint;
 
-	handle: XrSwapchain;
+	swapchain: XrSwapchain;
+
+	location: XrView;
+
+	current_index: u32;
 	textures: GLuint[];
+	fbos: GLuint[];
+	depth: GLuint;
 }

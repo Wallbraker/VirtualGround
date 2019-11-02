@@ -23,6 +23,8 @@ import charge.core;
 
 import virtual_ground.program;
 import virtual_ground.actions;
+import virtual_ground.openxr;
+import virtual_ground.egl;
 
 
 fn main(args: string[]) i32
@@ -39,22 +41,146 @@ fn main(args: string[]) i32
 		return 1;
 	}
 
-	while (p.updateActions()) {
+	while (true) {
 		frameState: XrFrameState;
-		frameState.type = XrStructureType.XR_TYPE_FRAME_STATE;
+		frameState.type = XR_TYPE_FRAME_STATE;
 
-		xrWaitFrame(p.session, null, &frameState);
-		xrBeginFrame(p.session, null);
+		ret = xrWaitFrame(p.oxr.session, null, &frameState);
+		if (ret != XR_SUCCESS) {
+			p.log("xrWaitFrame failed!");
+			break;
+		}
+		if (!p.updateActions()) {
+			break;
+		}
+
+		// We have a new preditcted time, get the swapchains ready.
+		foreach (ref view; p.oxr.views) {
+			acquireAndWaitViewImage(p, ref view);
+		}
+
+		ret = getViewLocation(p, ref frameState);
+		if (ret != XR_SUCCESS) {
+			// Already logged.
+			break;
+		}
+
+		// Swapchains are now ready, signal that we are starting to render.
+		ret = xrBeginFrame(p.oxr.session, null);
+		if (ret != XR_SUCCESS) {
+			p.log("xrBeginFrame failed!");
+			break;
+		}
+
+		releaseInfo: XrSwapchainImageReleaseInfo;
+		releaseInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
+
+		layerViews: XrCompositionLayerProjectionView[2];
+
+		// This is where we render each view.
+		foreach (i, ref view; p.oxr.views) {
+
+			glBindFramebuffer(GL_FRAMEBUFFER, view.fbos[view.current_index]);
+			glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+			glClearDepth(1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			glFlush();
+
+			xrReleaseSwapchainImage(view.swapchain, &releaseInfo);
+			view.current_index = 0xffff_ffff_u32;
+
+			layerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+			layerViews[i].pose = view.location.pose;
+			layerViews[i].fov = view.location.fov;
+			layerViews[i].subImage.swapchain = view.swapchain;
+			layerViews[i].subImage.imageRect.offset.x = 0;
+			layerViews[i].subImage.imageRect.offset.y = 0;
+			layerViews[i].subImage.imageRect.extent.width = cast(i32)view.width;
+			layerViews[i].subImage.imageRect.extent.height = cast(i32)view.height;
+		}
+
+		layer: XrCompositionLayerProjection;
+		layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+		layer.viewCount = cast(u32)layerViews.length;
+		layer.views = layerViews.ptr;
+
+		layers: XrCompositionLayerBaseHeader*[1];
+		layers[0] = cast(XrCompositionLayerBaseHeader*)&layer;
 
 		endFrame: XrFrameEndInfo;
-		endFrame.type = XrStructureType.XR_TYPE_FRAME_END_INFO;
+		endFrame.type = XR_TYPE_FRAME_END_INFO;
 		endFrame.displayTime = frameState.predictedDisplayTime;
 		endFrame.environmentBlendMode = p.oxr.blendMode;
+		endFrame.layerCount = cast(u32)layers.length;
+		endFrame.layers = layers.ptr;
 
-		xrEndFrame(p.session, &endFrame);
+		xrEndFrame(p.oxr.session, &endFrame);
 	}
 
 	return 0;
+}
+
+/*
+ *
+ * OpenXR functions.
+ *
+ */
+
+
+fn frame(p: Program, ref oxr: OpenXR)
+{
+
+}
+
+fn acquireAndWaitViewImage(p: Program, ref view: View)
+{
+	acquireInfo: XrSwapchainImageAcquireInfo;
+	acquireInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
+	xrAcquireSwapchainImage(view.swapchain, &acquireInfo, &view.current_index);
+
+	waitInfo: XrSwapchainImageWaitInfo;
+	waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
+	waitInfo.timeout = XR_INFINITE_DURATION;
+	xrWaitSwapchainImage(view.swapchain, &waitInfo);
+}
+
+fn getViewLocation(p: Program, ref frameState: XrFrameState) XrResult
+{
+	ret: XrResult;
+	views: XrView[32];
+
+	viewLocateInfo: XrViewLocateInfo;
+	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
+	viewLocateInfo.viewConfigurationType = p.oxr.viewConfigType;
+	viewLocateInfo.displayTime = frameState.predictedDisplayTime;
+	viewLocateInfo.space = p.oxr.space;
+
+	viewState: XrViewState;
+	viewState.type = XR_TYPE_VIEW_STATE;
+
+	viewCountOutput: u32;
+	ret = xrLocateViews(p.oxr.session, &viewLocateInfo, &viewState, 0, &viewCountOutput, null);
+	if (ret != XR_SUCCESS) {
+		p.log("xrLocateViews failed");
+		return ret;
+	}
+	if (views.length < viewCountOutput) {
+		p.log("Way to main views");
+		return XR_ERROR_VALIDATION_FAILURE;
+	}
+
+	viewCapacityInput := cast(u32)views.length;
+	ret = xrLocateViews(p.oxr.session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, views.ptr);
+	if (ret != XR_SUCCESS) {
+		p.log("xrLocateViews failed");
+		return ret;
+	}
+
+	foreach (i, ref view; p.oxr.views) {
+		view.location = views[i];
+	}
+
+	return XR_SUCCESS;
 }
 
 fn initOpenXR(p: Program) bool
@@ -63,15 +189,15 @@ fn initOpenXR(p: Program) bool
 	       createInstance(p) &&
 	       createSession(p) &&
 	       createActions(p) &&
-	       createSwapchains(p) &&
+	       createViews(p) &&
 	       startSession(p);
 }
 
 fn finiOpenXR(p: Program)
 {
-	if (p.instance !is null) {
-		xrDestroyInstance(p.instance);
-		p.instance = cast(XrInstance)XR_NULL_HANDLE;
+	if (p.oxr.instance !is null) {
+		xrDestroyInstance(p.oxr.instance);
+		p.oxr.instance = cast(XrInstance)XR_NULL_HANDLE;
 	}
 }
 
@@ -108,7 +234,6 @@ fn createInstance(p: Program) bool
 			break;
 		default:
 		}
-		p.log(new "${name}");
 	}
 
 	if (!p.XR_MND_egl_enable) {
@@ -122,23 +247,23 @@ fn createInstance(p: Program) bool
 	];
 
 	createInfo: XrInstanceCreateInfo;
-	createInfo.type = XrStructureType.XR_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.enabledExtensionCount = cast(u32)exts.length;
 	createInfo.enabledExtensionNames = exts.ptr;
 	createInfo.applicationInfo.applicationName[] = "Virtual Ground";
 	createInfo.applicationInfo.applicationVersion = 1;
 	createInfo.applicationInfo.engineName[] = "Charge";
-	createInfo.applicationInfo.engineVersion = 0;
+	createInfo.applicationInfo.engineVersion = 1;
 	createInfo.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 3);
 
-	ret = xrCreateInstance(&createInfo, &p.instance);
-	if (ret != XrResult.XR_SUCCESS) {
+	ret = xrCreateInstance(&createInfo, &p.oxr.instance);
+	if (ret != XR_SUCCESS) {
 		p.log("Failed to create instance");
 		return false;
 	}
 
 	// Also load functions for this instance.
-	loadInstanceFunctions(p.instance);
+	loadInstanceFunctions(p.oxr.instance);
 
 	return true;
 }
@@ -148,11 +273,12 @@ fn createSession(p: Program) bool
 	XrResult ret;
 
 	getInfo: XrSystemGetInfo;
-	getInfo.type = XrStructureType.XR_TYPE_SYSTEM_GET_INFO;
+	getInfo.type = XR_TYPE_SYSTEM_GET_INFO;
 	getInfo.formFactor = XrFormFactor.XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 
-	ret = xrGetSystem(p.instance, &getInfo, &p.systemId);
-	if (ret != XrResult.XR_SUCCESS) {
+	ret = xrGetSystem(p.oxr.instance, &getInfo, &p.oxr.systemId);
+	if (ret != XR_SUCCESS) {
+		p.log("xrGetSystem failed!");
 		return false;
 	}
 
@@ -161,34 +287,49 @@ fn createSession(p: Program) bool
 
 	envBlendModes: XrEnvironmentBlendMode[];
 	ret = enumEnvironmentBlendModes(p, p.oxr.viewConfigType, out envBlendModes);
-	if (ret != XrResult.XR_SUCCESS || envBlendModes.length <= 0) {
+	if (ret != XR_SUCCESS || envBlendModes.length <= 0) {
 		return false;
 	}
 	p.oxr.blendMode = envBlendModes[0];
 
 	eglInfo: XrGraphicsBindingEGLMND;
-	eglInfo.type = XrStructureType.XR_TYPE_GRAPHICS_BINDING_EGL_MND;
+	eglInfo.type = XR_TYPE_GRAPHICS_BINDING_EGL_MND;
 	eglInfo.getProcAddress = eglGetProcAddress;
 	eglInfo.display = p.egl.dpy;
 	eglInfo.config = p.egl.cfg;
 	eglInfo.context = p.egl.ctx;
 
 	createInfo: XrSessionCreateInfo;
-	createInfo.type = XrStructureType.XR_TYPE_SESSION_CREATE_INFO;
+	createInfo.type = XR_TYPE_SESSION_CREATE_INFO;
 	createInfo.next = cast(void*)&eglInfo;
-	createInfo.systemId = p.systemId;
-	xrCreateSession(p.instance, &createInfo, &p.session);
+	createInfo.systemId = p.oxr.systemId;
+	ret = xrCreateSession(p.oxr.instance, &createInfo, &p.oxr.session);
+	if (ret != XR_SUCCESS) {
+		p.log("xrCreateSession failed!");
+		return false;
+	}
+
+	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
+	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
+	referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+
+	ret = xrCreateReferenceSpace(p.oxr.session, &referenceSpaceCreateInfo, &p.oxr.space);
+	if (ret != XR_SUCCESS) {
+		p.log("xrCreateReferenceSpace failed!");
+		return false;
+	}
 
 	return true;
 }
 
-fn createSwapchains(p: Program) bool
+fn createViews(p: Program) bool
 {
 	XrResult ret;
 
-	p.oxr.viewConfigProperties.type = XrStructureType.XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
-	ret = xrGetViewConfigurationProperties(p.instance, p.systemId, p.oxr.viewConfigType, &p.oxr.viewConfigProperties);
-	if (ret != XrResult.XR_SUCCESS) {
+	p.oxr.viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
+	ret = xrGetViewConfigurationProperties(p.oxr.instance, p.oxr.systemId, p.oxr.viewConfigType, &p.oxr.viewConfigProperties);
+	if (ret != XR_SUCCESS) {
 		p.log("xrGetViewConfigurationProperties failed!");
 		return false;
 	}
@@ -196,20 +337,20 @@ fn createSwapchains(p: Program) bool
 	p.log(new "viewConfigProperties.fovMutable: ${cast(bool)p.oxr.viewConfigProperties.fovMutable}");
 
 	ret = enumViewConfigurationViews(p, out p.oxr.viewConfigs);
-	if (ret != XrResult.XR_SUCCESS) {
+	if (ret != XR_SUCCESS) {
 		p.log("enumViewConfigurationViews failed!");
 		return false;
 	}
 
-	p.oxr.swaps = new Swapchain[](p.oxr.viewConfigs.length);
+	p.oxr.views = new View[](p.oxr.viewConfigs.length);
 
 	foreach(i, ref viewConfig; p.oxr.viewConfigs) {
-		swap := &p.oxr.swaps[i];
-		swap.width = viewConfig.recommendedImageRectWidth;
-		swap.height = viewConfig.recommendedImageRectHeight;
+		view := &p.oxr.views[i];
+		view.width = viewConfig.recommendedImageRectWidth;
+		view.height = viewConfig.recommendedImageRectHeight;
 
 		swapchainCreateInfo: XrSwapchainCreateInfo;
-		swapchainCreateInfo.type = XrStructureType.XR_TYPE_SWAPCHAIN_CREATE_INFO;
+		swapchainCreateInfo.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
 		swapchainCreateInfo.arraySize = 1;
 		swapchainCreateInfo.format = GL_RGBA8;
 		swapchainCreateInfo.width = viewConfig.recommendedImageRectWidth;
@@ -219,13 +360,34 @@ fn createSwapchains(p: Program) bool
 		swapchainCreateInfo.sampleCount = 1;
 		swapchainCreateInfo.usageFlags = XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 
-		ret = xrCreateSwapchain(p.session, &swapchainCreateInfo, &swap.handle);
-		if (ret != XrResult.XR_SUCCESS) {
+		ret = xrCreateSwapchain(p.oxr.session, &swapchainCreateInfo, &view.swapchain);
+		if (ret != XR_SUCCESS) {
 			p.log("xrCreateSwapchain failed!");
 			return false;
 		}
 
-		enumSwapchainImages(p, swap.handle, out swap.textures);
+		ret = enumSwapchainImages(p, view.swapchain, out view.textures);
+		if (ret != XR_SUCCESS) {
+			p.log("xrCreateSwapchain failed!");
+			return false;
+		}
+
+		glGenTextures(1, &view.depth);
+		glBindTexture(GL_TEXTURE_2D, view.depth);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, cast(GLsizei)view.width, cast(GLsizei)view.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, null);
+
+		view.fbos = new GLuint[](view.textures.length);
+		glGenFramebuffers(cast(GLsizei)view.fbos.length, view.fbos.ptr);
+		foreach (k, ref fbo; view.fbos) {
+			glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, view.textures[k], 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, view.depth, 0);
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
 	return true;
@@ -236,232 +398,14 @@ fn startSession(p: Program) bool
 	ret: XrResult;
 
 	beginInfo: XrSessionBeginInfo;
-	beginInfo.type = XrStructureType.XR_TYPE_SESSION_BEGIN_INFO;
+	beginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
 	beginInfo.primaryViewConfigurationType = p.oxr.viewConfigType;
-	ret = xrBeginSession(p.session, &beginInfo);
+	ret = xrBeginSession(p.oxr.session, &beginInfo);
 
-	if (ret != XrResult.XR_SUCCESS) {
+	if (ret != XR_SUCCESS) {
 		p.log("xrBeginSession failed!");
 		return false;
 	}
 
 	return true;
-}
-
-fn enumExtensionProps(out outExtProps: XrExtensionProperties[]) XrResult
-{
-	XrResult ret;
-	num: u32;
-
-	ret = xrEnumerateInstanceExtensionProperties(null, 0, &num, null);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	extProps := new XrExtensionProperties[](num);
-	foreach (ref extProp; extProps) {
-		extProp.type = XrStructureType.XR_TYPE_EXTENSION_PROPERTIES;
-	}
-
-	ret = xrEnumerateInstanceExtensionProperties(null, num, &num, extProps.ptr);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	outExtProps = extProps;
-
-	return XrResult.XR_SUCCESS;
-}
-
-fn enumEnvironmentBlendModes(p: Program, viewConfigurationType: XrViewConfigurationType, out outEnvBlendModes: XrEnvironmentBlendMode[]) XrResult
-{
-	XrResult ret;
-	num: u32;
-
-	ret = xrEnumerateEnvironmentBlendModes(p.instance, p.systemId, viewConfigurationType, 0, &num, null);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	envBlendModes := new XrEnvironmentBlendMode[](num);
-	ret = xrEnumerateEnvironmentBlendModes(p.instance, p.systemId, viewConfigurationType, num, &num, envBlendModes.ptr);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	outEnvBlendModes = envBlendModes;
-
-	return XrResult.XR_SUCCESS;
-}
-
-fn enumViewConfigurationViews(p: Program, out outViewConfigs: XrViewConfigurationView[]) XrResult
-{
-	XrResult ret;
-	num: u32;
-
-	ret = xrEnumerateViewConfigurationViews(p.instance, p.systemId, p.oxr.viewConfigType, 0, &num, null);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	viewConfigs := new XrViewConfigurationView[](num);
-	foreach (ref view; viewConfigs) {
-		view.type = XrStructureType.XR_TYPE_VIEW_CONFIGURATION_VIEW;
-	}
-
-	ret = xrEnumerateViewConfigurationViews(p.instance, p.systemId, p.oxr.viewConfigType, num, &num, viewConfigs.ptr);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	outViewConfigs = viewConfigs;
-
-	return XrResult.XR_SUCCESS;
-}
-
-fn enumSwapchainImages(p: Program, handle: XrSwapchain, out outTextures: GLuint[]) XrResult
-{
-	XrResult ret;
-	num: u32;
-
-	ret = xrEnumerateSwapchainImages(handle, 0, &num, null);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	images := new XrSwapchainImageOpenGLKHR[](num);
-	foreach (image; images) {
-		image.type = XrStructureType.XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
-	}
-
-	ptr := cast(XrSwapchainImageBaseHeader*)images.ptr;
-	ret = xrEnumerateSwapchainImages(handle, num, &num, ptr);
-	if (ret != XrResult.XR_SUCCESS) {
-		return ret;
-	}
-
-	textures := new GLuint[](num);
-	foreach (i, ref texture; textures) {
-		texture = images[i].image;
-	}
-
-	outTextures = textures;
-
-	return XrResult.XR_SUCCESS;
-}
-
-
-/*
- *
- * EGL functions.
- *
- */
-
-fn initEGL(p: Program) bool
-{
-	p.egl.lib = loadEGL();
-	if (p.egl.lib is null) {
-		p.log("Failed to load EGL!");
-		return false;
-	}
-
-	if (!loadFuncs(p.egl.lib.symbol)) {
-		p.log("Failed to load EGL functions!");
-		return false;
-	}
-
-	p.egl.dpy = eglGetDisplay(null);
-	if (p.egl.dpy is null) {
-		p.log("Could not create EGLDisplay!");
-		return false;
-	}
-
-	if (!eglInitialize(p.egl.dpy, null, null)) {
-		p.log("eglInitialize failed!");
-		return false;	
-	}
-
-	attr: const(EGLint)[] = [
-		EGL_RENDERABLE_TYPE,
-		EGL_OPENGL_BIT,
-		EGL_NONE,
-	];
-
-	num_config: EGLint;
-	if (!eglChooseConfig(p.egl.dpy,
-	                     attr.ptr,
-	                     &p.egl.cfg,
-	                     1,
-	                     &num_config)) {
-		p.log("eglChooseConfig failed!");
-		return false;
-	}
-
-	if (num_config < 1) {
-		p.log("We didn't get any config!");
-		return false;
-	}
-
-	if (!eglBindAPI(EGL_OPENGL_API)) {
-		p.log("Failed bind OpenGL");
-		return false;
-	}
-
-	ctx_attr: const(EGLint)[] = [
-		EGL_CONTEXT_MAJOR_VERSION, 4,
-		EGL_CONTEXT_MINOR_VERSION, 5,
-		EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR,
-		EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR,
-		EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR,
-		EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR,
-		EGL_NONE,
-	];
-
-	p.egl.ctx = eglCreateContext(p.egl.dpy, p.egl.cfg, EGL_NO_CONTEXT, ctx_attr.ptr);
-	if (p.egl.ctx is EGL_NO_CONTEXT) {
-		p.log("We didn't get a context!");
-		return false;
-	}
-
-	if (!eglMakeCurrent(p.egl.dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, p.egl.ctx)) {
-		p.log("Make current failed!");
-		return false;
-	}
-
-	fn load(str: string) void*
-	{
-		return cast(void*)eglGetProcAddress(str.ptr);
-	}
-
-	if (!gladLoadGL(load)) {
-		p.log("Failed to load OpenGL functions!");
-		return false;
-	}
-
-	p.log(new "Vendor:   ${watt.toString(cast(const(char)*)glGetString(GL_VENDOR))}");
-	p.log(new "Version:  ${watt.toString(cast(const(char)*)glGetString(GL_VERSION))}");
-	p.log(new "Renderer: ${watt.toString(cast(const(char)*)glGetString(GL_RENDERER))}");
-
-	return true;
-}
-
-fn finiEGL(p: Program)
-{
-	if (p.egl.dpy !is null) {
-		return;
-	}
-
-	eglMakeCurrent(p.egl.dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-
-	if (p.egl.ctx !is EGL_NO_CONTEXT) {
-		eglDestroyContext(p.egl.dpy, p.egl.ctx);
-		p.egl.ctx = EGL_NO_CONTEXT;
-	}
-
-	if (p.egl.dpy !is null) {
-		// Can't free a display.
-		p.egl.dpy = null;
-	}
-
-	return;
 }

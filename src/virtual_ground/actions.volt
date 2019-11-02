@@ -45,7 +45,7 @@ fn updateActions(p: Program) bool
 	syncInfo.countActiveActionSets = cast(u32)activeActionSet.length;
 	syncInfo.activeActionSets = activeActionSet.ptr;
 
-	xrSyncActions(p.session, &syncInfo);
+	xrSyncActions(p.oxr.session, &syncInfo);
 
 	getInfo: XrActionStateGetInfo;
 	getInfo.type = XrStructureType.XR_TYPE_ACTION_STATE_GET_INFO;
@@ -55,7 +55,7 @@ fn updateActions(p: Program) bool
 	boolValue: XrActionStateBoolean;
 	boolValue.type = XrStructureType.XR_TYPE_ACTION_STATE_BOOLEAN;
 
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (!boolValue.isActive) {
 		p.log("Quit action not active!");
 		return false;
@@ -66,37 +66,37 @@ fn updateActions(p: Program) bool
 	}
 
 	getInfo.action = p.move.triangle;
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Triangle");
 	}
 
 	getInfo.action = p.move.circle;
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Circle");
 	}
 
 	getInfo.action = p.move.cross;
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Cross");
 	}
 
 	getInfo.action = p.move.square;
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Square");
 	}
 
 	getInfo.action = p.move.start;
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Start");
 	}
 
 	getInfo.action = p.move.select;
-	xrGetActionStateBoolean(p.session, &getInfo, &boolValue);
+	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Select");
 	}
@@ -129,46 +129,46 @@ fn createActions(p: Program) bool
 	moveTriangleClickPath: XrPath[2];
 	moveBallPosePath: XrPath[2];
 
-	xrStringToPath(p.instance, "/interaction_profiles/khr/simple_controller", &p.iProfKhrSimple);
-	xrStringToPath(p.instance, "/interaction_profiles/google/daydream_controller", &p.iProfGoogleDaydream);
-	xrStringToPath(p.instance, "/interaction_profiles/mnd/ball_on_stick_controller", &p.iProfMndBallOnStick);
+	xrStringToPath(p.oxr.instance, "/interaction_profiles/khr/simple_controller", &p.iProfKhrSimple);
+	xrStringToPath(p.oxr.instance, "/interaction_profiles/google/daydream_controller", &p.iProfGoogleDaydream);
+	xrStringToPath(p.oxr.instance, "/interaction_profiles/mnd/ball_on_stick_controller", &p.iProfMndBallOnStick);
 
-	xrStringToPath(p.instance, "/user", &p.subPathUser);
-	xrStringToPath(p.instance, "/user/hand/head", &p.subPathHead);
-	xrStringToPath(p.instance, "/user/hand/left", &p.subPathLeft);
-	xrStringToPath(p.instance, "/user/hand/right", &p.subPathRight);
-	xrStringToPath(p.instance, "/user/hand/gamepad", &p.subPathGamePad);
+	xrStringToPath(p.oxr.instance, "/user", &p.subPathUser);
+	xrStringToPath(p.oxr.instance, "/user/hand/head", &p.subPathHead);
+	xrStringToPath(p.oxr.instance, "/user/hand/left", &p.subPathLeft);
+	xrStringToPath(p.oxr.instance, "/user/hand/right", &p.subPathRight);
+	xrStringToPath(p.oxr.instance, "/user/hand/gamepad", &p.subPathGamePad);
 
-	xrStringToPath(p.instance, "/user/hand/left/input/select", &selectPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/select", &selectPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/select/click", &selectClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/select/click", &selectClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/start/click", &startClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/start/click", &startClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/squeeze/value", &squeezeValuePath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/squeeze/value", &squeezeValuePath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/squeeze/click", &squeezeClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/squeeze/click", &squeezeClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/trigger/value", &triggerValuePath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/trigger/value", &triggerValuePath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/aim/pose", &aimPosePath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/aim/pose", &aimPosePath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/grip/pose", &gripPosePath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/grip/pose", &gripPosePath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/output/haptic", &hapticPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/output/haptic", &hapticPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/menu/click", &menuClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/menu/click", &menuClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/cross_mnd/click", &moveCrossClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/cross_mnd/click", &moveCrossClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/square_mnd/click", &moveSquareClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/square_mnd/click", &moveSquareClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/circle_mnd/click", &moveCircleClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/circle_mnd/click", &moveCircleClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/triangle_mnd/click", &moveTriangleClickPath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/triangle_mnd/click", &moveTriangleClickPath[Side.Right]);
-	xrStringToPath(p.instance, "/user/hand/left/input/ball_mnd/pose", &moveBallPosePath[Side.Left]);
-	xrStringToPath(p.instance, "/user/hand/right/input/ball_mnd/pose", &moveBallPosePath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/select", &selectPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/select", &selectPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/select/click", &selectClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/select/click", &selectClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/start/click", &startClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/start/click", &startClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/squeeze/value", &squeezeValuePath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/squeeze/value", &squeezeValuePath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/squeeze/click", &squeezeClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/squeeze/click", &squeezeClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/trigger/value", &triggerValuePath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/trigger/value", &triggerValuePath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/aim/pose", &aimPosePath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/aim/pose", &aimPosePath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/grip/pose", &gripPosePath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/grip/pose", &gripPosePath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/output/haptic", &hapticPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/output/haptic", &hapticPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/menu/click", &menuClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/menu/click", &menuClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/cross_mnd/click", &moveCrossClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/cross_mnd/click", &moveCrossClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/square_mnd/click", &moveSquareClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/square_mnd/click", &moveSquareClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/circle_mnd/click", &moveCircleClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/circle_mnd/click", &moveCircleClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/triangle_mnd/click", &moveTriangleClickPath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/triangle_mnd/click", &moveTriangleClickPath[Side.Right]);
+	xrStringToPath(p.oxr.instance, "/user/hand/left/input/ball_mnd/pose", &moveBallPosePath[Side.Left]);
+	xrStringToPath(p.oxr.instance, "/user/hand/right/input/ball_mnd/pose", &moveBallPosePath[Side.Right]);
 
 	handSubactionPaths: XrPath[2] = [
 		p.subPathLeft,
@@ -181,11 +181,11 @@ fn createActions(p: Program) bool
 
 	actionSetInfo.actionSetName[] = "gameplay";
 	actionSetInfo.localizedActionSetName[] = "Gameplay";
-	xrCreateActionSet(p.instance, &actionSetInfo, &p.gameplayActionSet);
+	xrCreateActionSet(p.oxr.instance, &actionSetInfo, &p.gameplayActionSet);
 
 	actionSetInfo.actionSetName[] = "move";
 	actionSetInfo.localizedActionSetName[] = "Move Controller";
-	xrCreateActionSet(p.instance, &actionSetInfo, &p.move.set);
+	xrCreateActionSet(p.oxr.instance, &actionSetInfo, &p.move.set);
 
 	p.createFloat(p.gameplayActionSet, handSubactionPaths, "grab_object", "Grab Object", ref p.grabAction);
 	p.createBoolean(p.gameplayActionSet, handSubactionPaths, "quit_session", "Quit Session", ref p.quitAction);
@@ -261,7 +261,7 @@ fn createActions(p: Program) bool
 	attachInfo.type = XrStructureType.XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO;
 	attachInfo.countActionSets = cast(u32)actionSets.length;
 	attachInfo.actionSets = actionSets.ptr;
-	xrAttachSessionActionSets(p.session, &attachInfo);
+	xrAttachSessionActionSets(p.oxr.session, &attachInfo);
 
 	return true;
 }
@@ -332,5 +332,5 @@ fn suggest(p: Program, profile: XrPath, bindings: scope XrActionSuggestedBinding
 	suggestedBindings.suggestedBindings = bindings.ptr;
 	suggestedBindings.countSuggestedBindings = cast(u32)bindings.length;
 
-	xrSuggestInteractionProfileBindings(p.instance, &suggestedBindings);
+	xrSuggestInteractionProfileBindings(p.oxr.instance, &suggestedBindings);
 }
