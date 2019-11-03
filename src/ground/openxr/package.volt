@@ -1,9 +1,9 @@
 // Copyright 2019, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
- * @brief  All includer.
+ * @brief  OpenXR functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module virtual_ground.gfx;
+module ground.openxr;
 
-public import virtual_ground.gfx.scene;
+public import ground.openxr.enumerate;

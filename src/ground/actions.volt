@@ -4,10 +4,10 @@
  * @brief  Holds action related functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module virtual_ground.actions;
+module ground.actions;
 
 import amp.openxr;
-import virtual_ground.program;
+import ground.program;
 
 
 struct MoveActions

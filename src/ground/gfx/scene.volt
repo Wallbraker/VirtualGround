@@ -4,7 +4,7 @@
  * @brief  A single scene that can be rendered from multiple views.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module virtual_ground.gfx.scene;
+module ground.gfx.scene;
 
 import lib.gl.gl45;
 import core.c.stdio;

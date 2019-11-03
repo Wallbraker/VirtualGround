@@ -21,11 +21,11 @@ import amp.openxr.loader;
 
 import charge.core.openxr;
 
-import virtual_ground.program;
-import virtual_ground.actions;
-import virtual_ground.openxr;
-import virtual_ground.egl;
-import virtual_ground.gfx;
+import ground.program;
+import ground.actions;
+import ground.openxr;
+import ground.egl;
+import ground.gfx;
 
 
 fn main(args: string[]) i32

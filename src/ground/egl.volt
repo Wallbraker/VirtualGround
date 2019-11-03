@@ -4,7 +4,7 @@
  * @brief  EGL functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module virtual_ground.egl;
+module ground.egl;
 
 import watt = [watt.conv];
 
@@ -13,7 +13,7 @@ import amp.egl.loader;
 import lib.gl.gl33;
 import lib.gl.loader;
 
-import virtual_ground.program;
+import ground.program;
 
 
 fn initEGL(p: Program) bool

@@ -4,7 +4,7 @@
  * @brief  Holds the main program class.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module virtual_ground.program;
+module ground.program;
 
 import io = watt.io;
 import watt = [watt.library, watt.conv];
@@ -12,7 +12,7 @@ import amp.openxr;
 import amp.egl;
 import lib.gl.types;
 
-import virtual_ground.actions;
+import ground.actions;
 
 
 /*!
