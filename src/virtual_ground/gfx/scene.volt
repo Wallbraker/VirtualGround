@@ -20,7 +20,7 @@ class Scene
 {
 public:
 	tex: gfx.Texture;
-	buf: gfx.DrawBuffer;
+	buf: gfx.SimpleBuffer;
 
 
 public:
@@ -29,19 +29,19 @@ public:
 		file := sys.File.fromImport("default.png", import("default.png"));
 		tex = gfx.Texture2D.load(file);
 
-		fX := -0.5f;
-		fY := -0.5f;
-		fXW := 0.5f;
-		fYH := 0.5f;
+		fX := -20.0f;
+		fY := -20.0f;
+		fXW := 20.0f;
+		fYH := 20.0f;
 
-		b := new gfx.DrawVertexBuilder(6);
-		b.add(fX,  fY,  0.0f, 0.0f);
-		b.add(fXW, fY,  1.0f, 0.0f);
-		b.add(fXW, fYH, 1.0f, 1.0f);
-		b.add(fXW, fYH, 1.0f, 1.0f);
-		b.add(fX,  fYH, 0.0f, 1.0f);
-		b.add(fX,  fY,  0.0f, 0.0f);
-		buf = gfx.DrawBuffer.make("example/gl/buffer", b);
+		b := new gfx.SimpleVertexBuilder(6);
+		b.add(fX,  0.0f, fY,  40.0f,  0.0f);
+		b.add(fXW, 0.0f, fY,   0.0f,  0.0f);
+		b.add(fXW, 0.0f, fYH,  0.0f, 40.0f);
+		b.add(fXW, 0.0f, fYH,  0.0f, 40.0f);
+		b.add(fX,  0.0f, fYH, 40.0f, 40.0f);
+		b.add(fX,  0.0f, fY,  40.0f,  0.0f);
+		buf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
 		gfx.destroy(ref b);
 	}
 
@@ -76,30 +76,25 @@ public:
 		glFlush();
 	}
 
-
 	fn drawSquare(ref vp: math.Matrix4x4d)
 	{
-		pos := math.Point3f.opCall(0.0f, 1.6f, -2.0f);
-		rot := math.Quatf.opCall(0.0f, 1.0f, 0.0f, 0.0f);
+		pos := math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+		rot := math.Quatf.opCall(0.0f, 0.0f, 0.0f, 1.0f);
 
 		model: math.Matrix4x4d;
 		model.setToModel(ref pos, ref rot);
 
-		mvp: math.Matrix4x4d;
-		mvp.setToMultiply(ref vp, ref model);
-
 		matrix: math.Matrix4x4f;
-		matrix.setToAndTranspose(ref mvp);
+		matrix.setToMultiplyAndTranspose(ref vp, ref model);
 
-		gfx.drawShader.bind();
-		gfx.drawShader.matrix4("matrix", 1, false, ref matrix);
+		gfx.simpleShader.bind();
+		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
 
 		gfx.glCheckError();
 
 		glBindVertexArray(buf.vao);
 		tex.bind();
 
-		// Draw the triangle.
 		glDrawArrays(GL_TRIANGLES, 0, buf.num);
 
 		tex.unbind();
@@ -107,6 +102,7 @@ public:
 
 		gfx.glCheckError();
 	}
+
 
 private:
 	fn dumpMatrix(ref matrix: math.Matrix4x4d)
