@@ -19,12 +19,13 @@ import amp.egl.loader;
 import amp.openxr;
 import amp.openxr.loader;
 
-import charge.core;
+import charge.core.openxr;
 
 import virtual_ground.program;
 import virtual_ground.actions;
 import virtual_ground.openxr;
 import virtual_ground.egl;
+import virtual_ground.gfx;
 
 
 fn main(args: string[]) i32
@@ -41,6 +42,17 @@ fn main(args: string[]) i32
 		return 1;
 	}
 
+	// Only here to integrate better with charge code.
+	core := new CoreOpenXR();
+	scope (exit) {
+		core.close();
+	}
+
+	scene := new Scene();
+	scope (exit) {
+		scene.close();
+	}
+
 	while (true) {
 		frameState: XrFrameState;
 		frameState.type = XR_TYPE_FRAME_STATE;
@@ -48,9 +60,6 @@ fn main(args: string[]) i32
 		ret = xrWaitFrame(p.oxr.session, null, &frameState);
 		if (ret != XR_SUCCESS) {
 			p.log("xrWaitFrame failed!");
-			break;
-		}
-		if (!p.updateActions()) {
 			break;
 		}
 
@@ -79,12 +88,11 @@ fn main(args: string[]) i32
 
 		// This is where we render each view.
 		foreach (i, ref view; p.oxr.views) {
-
 			glBindFramebuffer(GL_FRAMEBUFFER, view.fbos[view.current_index]);
-			glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-			glClearDepth(1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			glFlush();
+
+			glViewport(0, 0, cast(GLsizei)view.width, cast(GLsizei)view.height);
+
+			scene.renderView(ref view.location);
 
 			xrReleaseSwapchainImage(view.swapchain, &releaseInfo);
 			view.current_index = 0xffff_ffff_u32;
@@ -115,6 +123,10 @@ fn main(args: string[]) i32
 		endFrame.layers = layers.ptr;
 
 		xrEndFrame(p.oxr.session, &endFrame);
+
+		if (!p.updateActions()) {
+			break;
+		}
 	}
 
 	return 0;
