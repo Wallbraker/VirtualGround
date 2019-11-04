@@ -30,17 +30,17 @@ public:
 		tex = gfx.Texture2D.load(file);
 
 		fX := -20.0f;
-		fY := -20.0f;
+		fZ := -20.0f;
 		fXW := 20.0f;
-		fYH := 20.0f;
+		fZH := 20.0f;
 
 		b := new gfx.SimpleVertexBuilder(6);
-		b.add(fX,  0.0f, fY,  40.0f,  0.0f);
-		b.add(fXW, 0.0f, fY,   0.0f,  0.0f);
-		b.add(fXW, 0.0f, fYH,  0.0f, 40.0f);
-		b.add(fXW, 0.0f, fYH,  0.0f, 40.0f);
-		b.add(fX,  0.0f, fYH, 40.0f, 40.0f);
-		b.add(fX,  0.0f, fY,  40.0f,  0.0f);
+		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
+		b.add(fXW, 0.0f, fZ,  40.0f,  0.0f);
+		b.add(fXW, 0.0f, fZH, 40.0f, 40.0f);
+		b.add(fXW, 0.0f, fZH, 40.0f, 40.0f);
+		b.add(fX,  0.0f, fZH,  0.0f, 40.0f);
+		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
 		buf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
 		gfx.destroy(ref b);
 	}
@@ -70,16 +70,18 @@ public:
 		glClearColor(0.1f, 0.3f, 0.1f, 1.0f);
 		glClearDepth(1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
 
 		drawSquare(ref vp);
 
+		glDisable(GL_DEPTH_TEST);
 		glFlush();
 	}
 
 	fn drawSquare(ref vp: math.Matrix4x4d)
 	{
 		pos := math.Point3f.opCall(0.0f, 0.0f, 0.0f);
-		rot := math.Quatf.opCall(0.0f, 0.0f, 0.0f, 1.0f);
+		rot := math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 
 		model: math.Matrix4x4d;
 		model.setToModel(ref pos, ref rot);
@@ -90,27 +92,21 @@ public:
 		gfx.simpleShader.bind();
 		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
 
-		gfx.glCheckError();
-
 		glBindVertexArray(buf.vao);
 		tex.bind();
-
 		glDrawArrays(GL_TRIANGLES, 0, buf.num);
-
 		tex.unbind();
 		glBindVertexArray(0);
-
-		gfx.glCheckError();
 	}
 
 
 private:
-	fn dumpMatrix(ref matrix: math.Matrix4x4d)
+	fn dumpMatrix(str: string, ref matrix: math.Matrix4x4d)
 	{
 		m: math.Matrix4x4f;
 		m.setToAndTranspose(ref matrix);
 
-		fprintf(stderr, "Matrix!\n");
+		fprintf(stderr, "Matrix %s!\n", str.ptr);
 		for (int i = 0; i < 4; i++) {
 			fprintf(stderr, "  %+f, %+f, %+f, %+f\n",
 			        m.a[i * 4 + 0],
