@@ -15,6 +15,8 @@ import math = charge.math;
 
 import amp.openxr : XrView;
 
+import ground.gfx.voxel;
+
 
 class Scene
 {
@@ -71,16 +73,21 @@ public:
 		glClearDepth(1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
+		glBindSampler(0, voxelSampler);
 
 		drawSquare(ref vp);
+		drawVoxel(ref vp);
 
+		glBindSampler(0, 0);
 		glDisable(GL_DEPTH_TEST);
+
+		gfx.glCheckError();
 		glFlush();
 	}
 
 	fn drawSquare(ref vp: math.Matrix4x4d)
 	{
-		pos := math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+		pos := math.Point3f.opCall(0.0f, -1.0f, 0.0f);
 		rot := math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 
 		model: math.Matrix4x4d;
@@ -95,6 +102,28 @@ public:
 		glBindVertexArray(buf.vao);
 		tex.bind();
 		glDrawArrays(GL_TRIANGLES, 0, buf.num);
+		tex.unbind();
+		glBindVertexArray(0);
+	}
+
+	fn drawVoxel(ref vp: math.Matrix4x4d)
+	{
+		pos := math.Point3f.opCall(-3.0f, -1.0f, -3.0f);
+		rot := math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+		rot.normalize();
+
+		model: math.Matrix4x4d;
+		model.setToModel(ref pos, ref rot);
+
+		matrix: math.Matrix4x4f;
+		matrix.setToMultiplyAndTranspose(ref vp, ref model);
+
+		voxelShader.bind();
+		voxelShader.matrix4("u_matrix", 1, false, ref matrix);
+
+		glBindVertexArray(buf.vao);
+		tex.bind();
+		glDrawArrays(GL_TRIANGLES, 0, 6 * (4 * 4 + 4 + 4));
 		tex.unbind();
 		glBindVertexArray(0);
 	}
