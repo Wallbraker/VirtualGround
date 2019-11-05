@@ -123,7 +123,7 @@ public:
 
 		glBindVertexArray(buf.vao);
 		tex.bind();
-		glDrawArrays(GL_TRIANGLES, 0, 6 * (4 * 4 + 4 + 4));
+		glDrawArrays(GL_TRIANGLES, 0, 6 * (4 * 4 + 4 + 4 + 9));
 		tex.unbind();
 		glBindVertexArray(0);
 	}

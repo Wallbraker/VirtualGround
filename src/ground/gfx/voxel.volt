@@ -155,6 +155,12 @@ const Quad in_data[] = Quad[](
 	QUAD(3, 0, 1, YP, B), QUAD(3, 0, 2, YP, G), QUAD(3, 0, 3, YP, R), QUAD(3, 0, 4, YP, W),
 	QUAD(4, 0, 1, YP, W), QUAD(4, 0, 2, YP, B), QUAD(4, 0, 3, YP, G), QUAD(4, 0, 4, YP, R),
 
+	QUAD(0, 1, 0, YP, B), QUAD(1, 1, 0, YP, W), QUAD(2, 1, 0, YP, R), QUAD(3, 1, 0, YP, G), QUAD(4, 1, 0, YP, B),
+	QUAD(0, 1, 1, YP, G),
+	QUAD(0, 1, 2, YP, R),
+	QUAD(0, 1, 3, YP, W),
+	QUAD(0, 1, 4, YP, B),
+
 	QUAD(0, 0, 0, YP, W)
 );
 
