@@ -94,7 +94,7 @@ fn enumSwapchainImages(p: Program, handle: XrSwapchain, out outTextures: GLuint[
 	}
 
 	images := new XrSwapchainImageOpenGLKHR[](num);
-	foreach (image; images) {
+	foreach (ref image; images) {
 		image.type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
 	}
 
