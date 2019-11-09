@@ -61,7 +61,6 @@ fn updateActions(p: Program) bool
 		return false;
 	}
 	if (boolValue.currentState) {
-		p.log("Bye bye!");
 		return false;
 	}
 

@@ -346,8 +346,6 @@ fn createViews(p: Program) bool
 		return false;
 	}
 
-	p.log(new "viewConfigProperties.fovMutable: ${cast(bool)p.oxr.viewConfigProperties.fovMutable}");
-
 	ret = enumViewConfigurationViews(p, out p.oxr.viewConfigs);
 	if (ret != XR_SUCCESS) {
 		p.log("enumViewConfigurationViews failed!");
