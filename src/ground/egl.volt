@@ -97,9 +97,11 @@ fn initEGL(p: Program) bool
 		return false;
 	}
 
-	p.log(new "Vendor:   ${watt.toString(cast(const(char)*)glGetString(GL_VENDOR))}");
-	p.log(new "Version:  ${watt.toString(cast(const(char)*)glGetString(GL_VERSION))}");
-	p.log(new "Renderer: ${watt.toString(cast(const(char)*)glGetString(GL_RENDERER))}");
+	if (false) {
+		p.log(new "Vendor:   ${watt.toString(cast(const(char)*)glGetString(GL_VENDOR))}");
+		p.log(new "Version:  ${watt.toString(cast(const(char)*)glGetString(GL_VERSION))}");
+		p.log(new "Renderer: ${watt.toString(cast(const(char)*)glGetString(GL_RENDERER))}");
+	}
 
 	return true;
 }
