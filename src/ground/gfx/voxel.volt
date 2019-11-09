@@ -14,16 +14,15 @@ import gfx = charge.gfx;
 import charge.gfx.gl;
 
 
-struct QuadData
-{
-	x_y: u32;
-	z_t: u32;
-	rgb_face: u32;
-}
 
+
+/*!
+ * For building a voxel quad buffer.
+ */
 class VoxelQuadBuilder : gfx.Builder
 {
 public:
+	//! Which side of the cube is this quad.
 	enum Side
 	{
 		XN,
@@ -34,9 +33,13 @@ public:
 		ZP,
 	}
 
-
-public:
-	quads: QuadData[];
+	//! Layout of the data in the buffer.
+	struct Data
+	{
+		x_y: u32;
+		z_t: u32;
+		rgb_face: u32;
+	}
 
 
 public:
@@ -52,7 +55,7 @@ public:
 		// Bake side into the alpha channel.
 		color.a = cast(u8)side;
 
-		q: QuadData;
+		q: Data;
 		q.x_y = cast(u32)(x | (y << 16));
 		q.z_t = cast(u32)(z | cast(i32)(texture << 16));
 		q.rgb_face = color.toABGR();
@@ -60,9 +63,9 @@ public:
 		add(q);
 	}
 
-	fn add(quad: QuadData)
+	fn add(quad: Data)
 	{
-		add(cast(void*)&quad, typeid(QuadData).size);
+		add(cast(void*)&quad, typeid(Data).size);
 	}
 
 	final fn bake(out buf: GLuint, out num: GLsizei)
@@ -71,7 +74,7 @@ public:
 		glCreateBuffers(1, &buf);
 		glNamedBufferData(buf, cast(GLsizeiptr)length, ptr, GL_STATIC_DRAW);
 
-		stride := cast(GLsizei)typeid(QuadData).size;
+		stride := cast(GLsizei)typeid(Data).size;
 		num = (cast(GLsizei)length / stride) * 6;
 	}
 }
@@ -83,6 +86,7 @@ public:
  * It has one shader uniform called 'matrix' that is the.
  */
 global voxelShader: gfx.Shader;
+global voxelTexture: gfx.Texture;
 global voxelSampler: GLuint;
 global voxelIndexBuffer: GLuint;
 global voxelVAO: GLuint;
@@ -93,6 +97,10 @@ global this()
 {
 	core.addInitAndCloseRunners(initVoxel, closeVoxel);
 }
+
+enum LogSize : u32 = 8;
+enum MaxSize : u32 = 1 << LogSize;
+enum DataSize = MaxSize * MaxSize;
 
 fn initVoxel()
 {
@@ -112,11 +120,33 @@ fn initVoxel()
 	                    fragmentShader45,
 	                    null,
 	                    null);
+
+	voxelTexture = gfx.Texture2D.makeRGBA8("ground/voxel/frame", MaxSize, MaxSize, LogSize);
+	data: math.Color4b[DataSize];
+
+	foreach (level; 0 .. LogSize) {
+		dim := MaxSize >> level;
+		foreach (y; 0 .. dim) {
+			foreach (x; 0 .. dim) {
+				if (x == 0 || y == 0 || x == (dim - 1) || y == (dim - 1)) {
+					data[x + y * dim] = math.Color4b.Black;
+				} else {
+					data[x + y * dim] = math.Color4b.White;
+				}
+			}
+		}
+
+		glTextureSubImage2D(voxelTexture.id, cast(GLint)level, 0, 0, cast(GLint)dim, cast(GLint)dim, GL_RGBA, GL_UNSIGNED_BYTE, cast(void*)data.ptr);
+	}
+
+	//glGenerateTextureMipmap(voxelTexture.id);
+	glTextureSubImage2D(voxelTexture.id, cast(GLint)(LogSize - 1), 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, cast(void*)&math.Color4b.White);
 }
 
 fn closeVoxel()
 {
 	gfx.destroy(ref voxelShader);
+	gfx.reference(ref voxelTexture, null);
 
 	if (voxelIndexBuffer) { glDeleteBuffers(1, &voxelIndexBuffer); voxelIndexBuffer = 0; }
 	if (voxelVAO) { glDeleteVertexArrays(1, &voxelVAO); voxelVAO = 0; }

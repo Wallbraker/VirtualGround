@@ -16,22 +16,27 @@ import math = charge.math;
 import amp.openxr : XrView;
 
 import ground.gfx.voxel;
+import ground.gfx.magica;
 
 
 class Scene
 {
 public:
-	tex: gfx.Texture;
+	texLogo: gfx.Texture;
+	texWhite: gfx.Texture;
 	buf: gfx.SimpleBuffer;
 
 	mVoxelStore: GLuint;
 	mNumVerticies: GLsizei;
 
+
 public:
 	this()
 	{
 		file := sys.File.fromImport("default.png", import("default.png"));
-		tex = gfx.Texture2D.load(file);
+		texLogo = gfx.Texture2D.load(file);
+		texWhite = gfx.Texture2D.makeRGBA8("ground/tex/white", 1, 1, 1);
+		glTextureSubImage2D(texWhite.id, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, cast(void*)&math.Color4b.White);
 
 		fX := -20.0f;
 		fZ := -20.0f;
@@ -49,12 +54,19 @@ public:
 		gfx.destroy(ref b);
 
 		hackedScene(out mVoxelStore, out mNumVerticies);
+/*
+		f := import("test.vox");
+		qb := loadFromData(cast(const(u8)[])import("test.vox"));
+		qb.bake(out mVoxelStore, out mNumVerticies);
+		qb.close();
+*/
 	}
 
 	fn close()
 	{
-		gfx.reference(ref tex, null);
 		gfx.reference(ref buf, null);
+		gfx.reference(ref texLogo, null);
+		gfx.reference(ref texWhite, null);
 	}
 
 	fn renderView(ref loc: XrView)
@@ -65,7 +77,7 @@ public:
 		proj: math.Matrix4x4d;
 		proj.setToFrustum(loc.fov.angleLeft, loc.fov.angleRight,
 		                  loc.fov.angleDown, loc.fov.angleUp,
-		                  0.05, 100.0);
+		                  0.05, 256.0);
 
 		view: math.Matrix4x4d;
 		view.setToLookFrom(ref cameraPosition, ref cameraRotation);
@@ -104,9 +116,9 @@ public:
 		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
 
 		glBindVertexArray(buf.vao);
-		tex.bind();
+		texLogo.bind();
 		glDrawArrays(GL_TRIANGLES, 0, buf.num);
-		tex.unbind();
+		texLogo.unbind();
 		glBindVertexArray(0);
 	}
 
@@ -125,7 +137,7 @@ public:
 		voxelShader.bind();
 		voxelShader.matrix4("u_matrix", 1, false, ref matrix);
 
-		tex.bind();
+		voxelTexture.bind();
 		glBindVertexArray(voxelVAO);
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mVoxelStore);
@@ -133,7 +145,7 @@ public:
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mVoxelStore);
 
 		glBindVertexArray(0);
-		tex.unbind();
+		voxelTexture.unbind();
 	}
 
 
