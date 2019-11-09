@@ -24,6 +24,8 @@ public:
 	tex: gfx.Texture;
 	buf: gfx.SimpleBuffer;
 
+	mVoxelStore: GLuint;
+	mNumVerticies: GLsizei;
 
 public:
 	this()
@@ -45,6 +47,8 @@ public:
 		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
 		buf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
 		gfx.destroy(ref b);
+
+		hackedScene(out mVoxelStore, out mNumVerticies);
 	}
 
 	fn close()
@@ -121,11 +125,15 @@ public:
 		voxelShader.bind();
 		voxelShader.matrix4("u_matrix", 1, false, ref matrix);
 
-		glBindVertexArray(buf.vao);
 		tex.bind();
-		glDrawArrays(GL_TRIANGLES, 0, 6 * (4 * 4 + 4 + 4 + 9));
-		tex.unbind();
+		glBindVertexArray(voxelVAO);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mVoxelStore);
+		glDrawElements(GL_TRIANGLES, mNumVerticies, GL_UNSIGNED_INT, null);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mVoxelStore);
+
 		glBindVertexArray(0);
+		tex.unbind();
 	}
 
 
@@ -144,4 +152,57 @@ private:
 			        m.a[i * 4 + 3]);
 		}
 	}
+}
+
+fn hackedScene(out buf: GLuint, out num: GLsizei)
+{
+	b := new VoxelQuadBuilder();
+
+	W := math.Color4b.White;
+	R := math.Color4b.from(1.0f, 0.5f, 0.5f, 1.0f);
+	G := math.Color4b.from(0.5f, 1.0f, 0.5f, 1.0f);
+	B := math.Color4b.from(0.5f, 0.5f, 1.0f, 1.0f);
+	tex := 0x0_u32;
+
+	with (VoxelQuadBuilder.Side) {
+		b.add(0, 1, 1, XP, tex, W);
+		b.add(0, 1, 2, XP, tex, R);
+		b.add(0, 1, 3, XP, tex, G);
+		b.add(0, 1, 4, XP, tex, B);
+
+		b.add(1, 1, 0, ZP, tex, B);
+		b.add(2, 1, 0, ZP, tex, W);
+		b.add(3, 1, 0, ZP, tex, R);
+		b.add(4, 1, 0, ZP, tex, G);
+
+		b.add(1, 0, 1, YP, tex, R);
+		b.add(1, 0, 2, YP, tex, W);
+		b.add(1, 0, 3, YP, tex, B);
+		b.add(1, 0, 4, YP, tex, G);
+		b.add(2, 0, 1, YP, tex, G);
+		b.add(2, 0, 2, YP, tex, R);
+		b.add(2, 0, 3, YP, tex, W);
+		b.add(2, 0, 4, YP, tex, B);
+		b.add(3, 0, 1, YP, tex, B);
+		b.add(3, 0, 2, YP, tex, G);
+		b.add(3, 0, 3, YP, tex, R);
+		b.add(3, 0, 4, YP, tex, W);
+		b.add(4, 0, 1, YP, tex, W);
+		b.add(4, 0, 2, YP, tex, B);
+		b.add(4, 0, 3, YP, tex, G);
+		b.add(4, 0, 4, YP, tex, R);
+
+		b.add(0, 1, 0, YP, tex, B);
+		b.add(1, 1, 0, YP, tex, W);
+		b.add(2, 1, 0, YP, tex, R);
+		b.add(3, 1, 0, YP, tex, G);
+		b.add(4, 1, 0, YP, tex, B);
+		b.add(0, 1, 1, YP, tex, G);
+		b.add(0, 1, 2, YP, tex, R);
+		b.add(0, 1, 3, YP, tex, W);
+		b.add(0, 1, 4, YP, tex, B);
+	}
+
+	b.bake(out buf, out num);
+	b.close();
 }
