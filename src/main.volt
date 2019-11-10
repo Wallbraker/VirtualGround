@@ -32,10 +32,16 @@ import ground.gfx;
 
 fn main(args: string[]) i32
 {
-/*
-	g := new WindowGame(args);
-	return g.loop();
-*/
+	if (args.length >= 2) {
+		g := new WindowGame(args);
+		return g.loop();
+	} else {
+		return runOpenXR(args);
+	}
+}
+
+fn runOpenXR(args: string[]) i32
+{
 	p: Program = new Program();
 
 	scope (exit) {
