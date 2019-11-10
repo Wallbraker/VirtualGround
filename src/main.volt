@@ -20,6 +20,8 @@ import amp.openxr;
 import amp.openxr.loader;
 
 import charge.core.openxr;
+import gfx = [charge.gfx, ground.gfx.view];
+import math = charge.math;
 
 import ground.program;
 import ground.actions;
@@ -44,7 +46,16 @@ fn main(args: string[]) i32
 
 	// Only here to integrate better with charge code.
 	core := new CoreOpenXR();
+	defTarget := gfx.DefaultTarget.opCall();
 	scope (exit) {
+		foreach (ref view; p.oxr.views) {
+			foreach (ref target; view.targets) {
+				gfx.reference(ref target, null);
+			}
+			glDeleteTextures(1, &view.depth);
+		}
+
+		gfx.DefaultTarget.close();
 		core.close();
 	}
 
@@ -53,84 +64,11 @@ fn main(args: string[]) i32
 		scene.close();
 	}
 
-	while (true) {
-		frameState: XrFrameState;
-		frameState.type = XR_TYPE_FRAME_STATE;
-
-		ret = xrWaitFrame(p.oxr.session, null, &frameState);
-		if (ret != XR_SUCCESS) {
-			p.log("xrWaitFrame failed!");
-			break;
-		}
-
-		// We have a new preditcted time, get the swapchains ready.
-		foreach (ref view; p.oxr.views) {
-			acquireAndWaitViewImage(p, ref view);
-		}
-
-		ret = getViewLocation(p, ref frameState);
-		if (ret != XR_SUCCESS) {
-			// Already logged.
-			break;
-		}
-
-		// Swapchains are now ready, signal that we are starting to render.
-		ret = xrBeginFrame(p.oxr.session, null);
-		if (ret != XR_SUCCESS) {
-			p.log("xrBeginFrame failed!");
-			break;
-		}
-
-		releaseInfo: XrSwapchainImageReleaseInfo;
-		releaseInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
-
-		layerViews: XrCompositionLayerProjectionView[2];
-
-		// This is where we render each view.
-		foreach (i, ref view; p.oxr.views) {
-			glBindFramebuffer(GL_FRAMEBUFFER, view.fbos[view.current_index]);
-
-			glViewport(0, 0, cast(GLsizei)view.width, cast(GLsizei)view.height);
-
-			scene.renderView(ref view.location);
-
-			xrReleaseSwapchainImage(view.swapchain, &releaseInfo);
-			view.current_index = 0xffff_ffff_u32;
-
-			layerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-			layerViews[i].pose = view.location.pose;
-			layerViews[i].fov = view.location.fov;
-			layerViews[i].subImage.swapchain = view.swapchain;
-			layerViews[i].subImage.imageRect.offset.x = 0;
-			layerViews[i].subImage.imageRect.offset.y = 0;
-			layerViews[i].subImage.imageRect.extent.width = cast(i32)view.width;
-			layerViews[i].subImage.imageRect.extent.height = cast(i32)view.height;
-		}
-
-		layer: XrCompositionLayerProjection;
-		layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-		layer.viewCount = cast(u32)layerViews.length;
-		layer.views = layerViews.ptr;
-
-		layers: XrCompositionLayerBaseHeader*[1];
-		layers[0] = cast(XrCompositionLayerBaseHeader*)&layer;
-
-		endFrame: XrFrameEndInfo;
-		endFrame.type = XR_TYPE_FRAME_END_INFO;
-		endFrame.displayTime = frameState.predictedDisplayTime;
-		endFrame.environmentBlendMode = p.oxr.blendMode;
-		endFrame.layerCount = cast(u32)layers.length;
-		endFrame.layers = layers.ptr;
-
-		xrEndFrame(p.oxr.session, &endFrame);
-
-		if (!p.updateActions()) {
-			break;
-		}
-	}
+	p.oxr.loop(scene);
 
 	return 0;
 }
+
 
 /*
  *
@@ -138,71 +76,14 @@ fn main(args: string[]) i32
  *
  */
 
-
-fn frame(p: Program, ref oxr: OpenXR)
-{
-
-}
-
-fn acquireAndWaitViewImage(p: Program, ref view: View)
-{
-	acquireInfo: XrSwapchainImageAcquireInfo;
-	acquireInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
-	xrAcquireSwapchainImage(view.swapchain, &acquireInfo, &view.current_index);
-
-	waitInfo: XrSwapchainImageWaitInfo;
-	waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
-	waitInfo.timeout = XR_INFINITE_DURATION;
-	xrWaitSwapchainImage(view.swapchain, &waitInfo);
-}
-
-fn getViewLocation(p: Program, ref frameState: XrFrameState) XrResult
-{
-	ret: XrResult;
-	views: XrView[32];
-
-	viewLocateInfo: XrViewLocateInfo;
-	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
-	viewLocateInfo.viewConfigurationType = p.oxr.viewConfigType;
-	viewLocateInfo.displayTime = frameState.predictedDisplayTime;
-	viewLocateInfo.space = p.oxr.space;
-
-	viewState: XrViewState;
-	viewState.type = XR_TYPE_VIEW_STATE;
-
-	viewCountOutput: u32;
-	ret = xrLocateViews(p.oxr.session, &viewLocateInfo, &viewState, 0, &viewCountOutput, null);
-	if (ret != XR_SUCCESS) {
-		p.log("xrLocateViews failed");
-		return ret;
-	}
-	if (views.length < viewCountOutput) {
-		p.log("Way to main views");
-		return XR_ERROR_VALIDATION_FAILURE;
-	}
-
-	viewCapacityInput := cast(u32)views.length;
-	ret = xrLocateViews(p.oxr.session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, views.ptr);
-	if (ret != XR_SUCCESS) {
-		p.log("xrLocateViews failed");
-		return ret;
-	}
-
-	foreach (i, ref view; p.oxr.views) {
-		view.location = views[i];
-	}
-
-	return XR_SUCCESS;
-}
-
 fn initOpenXR(p: Program) bool
 {
 	return setupLoader(p) &&
-	       createInstance(p) &&
-	       createSession(p) &&
+	       p.oxr.createInstance() &&
+	       p.oxr.createSession(ref p.egl) &&
 	       createActions(p) &&
-	       createViews(p) &&
-	       startSession(p);
+	       p.oxr.createViews() &&
+	       p.oxr.startSession();
 }
 
 fn finiOpenXR(p: Program)
@@ -229,7 +110,7 @@ fn setupLoader(p: Program) bool
 	return true;
 }
 
-fn createInstance(p: Program) bool
+fn createInstance(ref oxr: OpenXR) bool
 {
 	XrResult ret;
 
@@ -239,17 +120,17 @@ fn createInstance(p: Program) bool
 		name := watt.toString(ext.extensionName.ptr);
 		switch (name) {
 		case "XR_MND_headless":
-			p.XR_MND_headless = true;
+			oxr.XR_MND_headless = true;
 			break;
 		case "XR_MND_egl_enable":
-			p.XR_MND_egl_enable = true;
+			oxr.XR_MND_egl_enable = true;
 			break;
 		default:
 		}
 	}
 
-	if (!p.XR_MND_egl_enable) {
-		p.log("Doesn't have XR_MND_egl_enable! :(");
+	if (!oxr.XR_MND_egl_enable) {
+		oxr.log("Doesn't have XR_MND_egl_enable! :(");
 		return false;
 	}
 
@@ -268,19 +149,19 @@ fn createInstance(p: Program) bool
 	createInfo.applicationInfo.engineVersion = 1;
 	createInfo.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 3);
 
-	ret = xrCreateInstance(&createInfo, &p.oxr.instance);
+	ret = xrCreateInstance(&createInfo, &oxr.instance);
 	if (ret != XR_SUCCESS) {
-		p.log("Failed to create instance");
+		oxr.log("Failed to create instance");
 		return false;
 	}
 
 	// Also load functions for this instance.
-	loadInstanceFunctions(p.oxr.instance);
+	loadInstanceFunctions(oxr.instance);
 
 	return true;
 }
 
-fn createSession(p: Program) bool
+fn createSession(ref oxr: OpenXR, ref egl: EGL) bool
 {
 	XrResult ret;
 
@@ -288,36 +169,36 @@ fn createSession(p: Program) bool
 	getInfo.type = XR_TYPE_SYSTEM_GET_INFO;
 	getInfo.formFactor = XrFormFactor.XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 
-	ret = xrGetSystem(p.oxr.instance, &getInfo, &p.oxr.systemId);
+	ret = xrGetSystem(oxr.instance, &getInfo, &oxr.systemId);
 	if (ret != XR_SUCCESS) {
-		p.log("xrGetSystem failed!");
+		oxr.log("xrGetSystem failed!");
 		return false;
 	}
 
 	// Hard coded for now.
-	p.oxr.viewConfigType = XrViewConfigurationType.XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	oxr.viewConfigType = XrViewConfigurationType.XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 	envBlendModes: XrEnvironmentBlendMode[];
-	ret = enumEnvironmentBlendModes(p, p.oxr.viewConfigType, out envBlendModes);
+	ret = enumEnvironmentBlendModes(ref oxr, oxr.viewConfigType, out envBlendModes);
 	if (ret != XR_SUCCESS || envBlendModes.length <= 0) {
 		return false;
 	}
-	p.oxr.blendMode = envBlendModes[0];
+	oxr.blendMode = envBlendModes[0];
 
 	eglInfo: XrGraphicsBindingEGLMND;
 	eglInfo.type = XR_TYPE_GRAPHICS_BINDING_EGL_MND;
 	eglInfo.getProcAddress = eglGetProcAddress;
-	eglInfo.display = p.egl.dpy;
-	eglInfo.config = p.egl.cfg;
-	eglInfo.context = p.egl.ctx;
+	eglInfo.display = egl.dpy;
+	eglInfo.config = egl.cfg;
+	eglInfo.context = egl.ctx;
 
 	createInfo: XrSessionCreateInfo;
 	createInfo.type = XR_TYPE_SESSION_CREATE_INFO;
 	createInfo.next = cast(void*)&eglInfo;
-	createInfo.systemId = p.oxr.systemId;
-	ret = xrCreateSession(p.oxr.instance, &createInfo, &p.oxr.session);
+	createInfo.systemId = oxr.systemId;
+	ret = xrCreateSession(oxr.instance, &createInfo, &oxr.session);
 	if (ret != XR_SUCCESS) {
-		p.log("xrCreateSession failed!");
+		oxr.log("xrCreateSession failed!");
 		return false;
 	}
 
@@ -326,36 +207,36 @@ fn createSession(p: Program) bool
 	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
 	referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
 
-	ret = xrCreateReferenceSpace(p.oxr.session, &referenceSpaceCreateInfo, &p.oxr.space);
+	ret = xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &oxr.space);
 	if (ret != XR_SUCCESS) {
-		p.log("xrCreateReferenceSpace failed!");
+		oxr.log("xrCreateReferenceSpace failed!");
 		return false;
 	}
 
 	return true;
 }
 
-fn createViews(p: Program) bool
+fn createViews(ref oxr: OpenXR) bool
 {
 	XrResult ret;
 
-	p.oxr.viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
-	ret = xrGetViewConfigurationProperties(p.oxr.instance, p.oxr.systemId, p.oxr.viewConfigType, &p.oxr.viewConfigProperties);
+	oxr.viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
+	ret = xrGetViewConfigurationProperties(oxr.instance, oxr.systemId, oxr.viewConfigType, &oxr.viewConfigProperties);
 	if (ret != XR_SUCCESS) {
-		p.log("xrGetViewConfigurationProperties failed!");
+		oxr.log("xrGetViewConfigurationProperties failed!");
 		return false;
 	}
 
-	ret = enumViewConfigurationViews(p, out p.oxr.viewConfigs);
+	ret = enumViewConfigurationViews(ref oxr, out oxr.viewConfigs);
 	if (ret != XR_SUCCESS) {
-		p.log("enumViewConfigurationViews failed!");
+		oxr.log("enumViewConfigurationViews failed!");
 		return false;
 	}
 
-	p.oxr.views = new View[](p.oxr.viewConfigs.length);
+	oxr.views = new View[](oxr.viewConfigs.length);
 
-	foreach(i, ref viewConfig; p.oxr.viewConfigs) {
-		view := &p.oxr.views[i];
+	foreach(i, ref viewConfig; oxr.viewConfigs) {
+		view := &oxr.views[i];
 		view.width = viewConfig.recommendedImageRectWidth;
 		view.height = viewConfig.recommendedImageRectHeight;
 
@@ -370,15 +251,15 @@ fn createViews(p: Program) bool
 		swapchainCreateInfo.sampleCount = 1;
 		swapchainCreateInfo.usageFlags = XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 
-		ret = xrCreateSwapchain(p.oxr.session, &swapchainCreateInfo, &view.swapchain);
+		ret = xrCreateSwapchain(oxr.session, &swapchainCreateInfo, &view.swapchain);
 		if (ret != XR_SUCCESS) {
-			p.log("xrCreateSwapchain failed!");
+			oxr.log("xrCreateSwapchain failed!");
 			return false;
 		}
 
-		ret = enumSwapchainImages(p, view.swapchain, out view.textures);
+		ret = enumSwapchainImages(ref oxr, view.swapchain, out view.textures);
 		if (ret != XR_SUCCESS) {
-			p.log("xrCreateSwapchain failed!");
+			oxr.log("xrCreateSwapchain failed!");
 			return false;
 		}
 
@@ -390,12 +271,15 @@ fn createViews(p: Program) bool
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, cast(GLsizei)view.width, cast(GLsizei)view.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, null);
 
-		view.fbos = new GLuint[](view.textures.length);
-		glGenFramebuffers(cast(GLsizei)view.fbos.length, view.fbos.ptr);
-		foreach (k, ref fbo; view.fbos) {
+		view.targets = new gfx.Target[](view.textures.length);
+		foreach (k, ref target; view.targets) {
+			fbo: GLuint;
+			glGenFramebuffers(1, &fbo);
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, view.textures[k], 0);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, view.depth, 0);
+			name := new "ground/view/${i}/${k}";
+			target = gfx.ExtTarget.make(name, fbo, view.width, view.height);
 		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
@@ -403,17 +287,17 @@ fn createViews(p: Program) bool
 	return true;
 }
 
-fn startSession(p: Program) bool
+fn startSession(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
 
 	beginInfo: XrSessionBeginInfo;
 	beginInfo.type = XR_TYPE_SESSION_BEGIN_INFO;
-	beginInfo.primaryViewConfigurationType = p.oxr.viewConfigType;
-	ret = xrBeginSession(p.oxr.session, &beginInfo);
+	beginInfo.primaryViewConfigurationType = oxr.viewConfigType;
+	ret = xrBeginSession(oxr.session, &beginInfo);
 
 	if (ret != XR_SUCCESS) {
-		p.log("xrBeginSession failed!");
+		oxr.log("xrBeginSession failed!");
 		return false;
 	}
 

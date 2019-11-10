@@ -10,10 +10,10 @@ import lib.gl.gl45;
 import core.c.stdio;
 
 import sys = charge.sys;
-import gfx = charge.gfx;
+import gfx = [charge.gfx, ground.gfx.view];
 import math = charge.math;
 
-import amp.openxr : XrView;
+import watt.math;
 
 import ground.gfx.voxel;
 import ground.gfx.magica;
@@ -69,18 +69,13 @@ public:
 		gfx.reference(ref texWhite, null);
 	}
 
-	fn renderView(ref loc: XrView)
+	fn renderView(target: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
-		cameraPosition := *cast(math.Point3f*)&loc.pose.position;
-		cameraRotation := *cast(math.Quatf*)&loc.pose.orientation;
-
 		proj: math.Matrix4x4d;
-		proj.setToFrustum(loc.fov.angleLeft, loc.fov.angleRight,
-		                  loc.fov.angleDown, loc.fov.angleUp,
-		                  0.05, 256.0);
+		proj.setToFrustum(ref viewInfo.fov, 0.05, 256.0);
 
 		view: math.Matrix4x4d;
-		view.setToLookFrom(ref cameraPosition, ref cameraRotation);
+		view.setToLookFrom(ref viewInfo.position, ref viewInfo.rotation);
 
 		vp: math.Matrix4x4d;
 		vp.setToMultiply(ref proj, ref view);

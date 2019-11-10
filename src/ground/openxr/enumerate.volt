@@ -37,19 +37,21 @@ fn enumExtensionProps(out outExtProps: XrExtensionProperties[]) XrResult
 	return XR_SUCCESS;
 }
 
-fn enumEnvironmentBlendModes(p: Program, viewConfigurationType: XrViewConfigurationType, out outEnvBlendModes: XrEnvironmentBlendMode[]) XrResult
+fn enumEnvironmentBlendModes(ref oxr: OpenXR, viewConfigurationType: XrViewConfigurationType, out outEnvBlendModes: XrEnvironmentBlendMode[]) XrResult
 {
 	XrResult ret;
 	num: u32;
 
-	ret = xrEnumerateEnvironmentBlendModes(p.oxr.instance, p.oxr.systemId, viewConfigurationType, 0, &num, null);
+	ret = xrEnumerateEnvironmentBlendModes(oxr.instance, oxr.systemId, viewConfigurationType, 0, &num, null);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateEnvironmentBlendModes failed (call 1)!");
 		return ret;
 	}
 
 	envBlendModes := new XrEnvironmentBlendMode[](num);
-	ret = xrEnumerateEnvironmentBlendModes(p.oxr.instance, p.oxr.systemId, viewConfigurationType, num, &num, envBlendModes.ptr);
+	ret = xrEnumerateEnvironmentBlendModes(oxr.instance, oxr.systemId, viewConfigurationType, num, &num, envBlendModes.ptr);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateEnvironmentBlendModes failed (call 2)!");
 		return ret;
 	}
 
@@ -58,13 +60,14 @@ fn enumEnvironmentBlendModes(p: Program, viewConfigurationType: XrViewConfigurat
 	return XR_SUCCESS;
 }
 
-fn enumViewConfigurationViews(p: Program, out outViewConfigs: XrViewConfigurationView[]) XrResult
+fn enumViewConfigurationViews(ref oxr: OpenXR, out outViewConfigs: XrViewConfigurationView[]) XrResult
 {
 	XrResult ret;
 	num: u32;
 
-	ret = xrEnumerateViewConfigurationViews(p.oxr.instance, p.oxr.systemId, p.oxr.viewConfigType, 0, &num, null);
+	ret = xrEnumerateViewConfigurationViews(oxr.instance, oxr.systemId, oxr.viewConfigType, 0, &num, null);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateViewConfigurationViews failed (call 1)!");
 		return ret;
 	}
 
@@ -73,8 +76,9 @@ fn enumViewConfigurationViews(p: Program, out outViewConfigs: XrViewConfiguratio
 		view.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
 	}
 
-	ret = xrEnumerateViewConfigurationViews(p.oxr.instance, p.oxr.systemId, p.oxr.viewConfigType, num, &num, viewConfigs.ptr);
+	ret = xrEnumerateViewConfigurationViews(oxr.instance, oxr.systemId, oxr.viewConfigType, num, &num, viewConfigs.ptr);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateViewConfigurationViews failed (call 2)!");
 		return ret;
 	}
 
@@ -83,13 +87,14 @@ fn enumViewConfigurationViews(p: Program, out outViewConfigs: XrViewConfiguratio
 	return XR_SUCCESS;
 }
 
-fn enumSwapchainImages(p: Program, handle: XrSwapchain, out outTextures: GLuint[]) XrResult
+fn enumSwapchainImages(ref oxr: OpenXR, handle: XrSwapchain, out outTextures: GLuint[]) XrResult
 {
 	XrResult ret;
 	num: u32;
 
 	ret = xrEnumerateSwapchainImages(handle, 0, &num, null);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateSwapchainImages(GL) failed (call 1)!");
 		return ret;
 	}
 
@@ -101,6 +106,7 @@ fn enumSwapchainImages(p: Program, handle: XrSwapchain, out outTextures: GLuint[
 	ptr := cast(XrSwapchainImageBaseHeader*)images.ptr;
 	ret = xrEnumerateSwapchainImages(handle, num, &num, ptr);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateSwapchainImages(GL) failed (call 2)!");
 		return ret;
 	}
 

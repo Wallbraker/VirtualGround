@@ -11,8 +11,12 @@ import watt = [watt.library, watt.conv];
 import amp.openxr;
 import amp.egl;
 import lib.gl.types;
+import lib.gl.gl45;
 
 import ground.actions;
+
+import math = charge.math;
+import gfx = charge.gfx;
 
 
 /*!
@@ -23,9 +27,6 @@ class Program
 public:
 	oxr: OpenXR;
 	egl: EGL;
-
-	XR_MND_headless: bool;
-	XR_MND_egl_enable: bool;
 
 	iProfKhrSimple: XrPath;
 	iProfGoogleDaydream: XrPath;
@@ -48,10 +49,21 @@ public:
 
 
 public:
+	this()
+	{
+		oxr.log = log;
+		oxr.updateActions = updateActions;
+	}
+
 	fn log(str: string)
 	{
 		io.output.writefln("%s", str);
 		io.output.flush();
+	}
+
+	fn updateActions() bool
+	{
+		return .updateActions(this);
 	}
 }
 
@@ -77,6 +89,11 @@ struct OpenXR
 	systemId: XrSystemId;
 	session: XrSession;
 
+	//! Is this available
+	XR_MND_headless: bool;
+	//! Is this available
+	XR_MND_egl_enable: bool;
+
 	//! Selected blend mode.
 	blendMode: XrEnvironmentBlendMode;
 	//! Selected view config.
@@ -89,6 +106,9 @@ struct OpenXR
 	space: XrSpace;
 
 	views: View[];
+
+	updateActions: dg() bool;
+	log: dg(string);
 }
 
 struct View
@@ -101,6 +121,6 @@ struct View
 
 	current_index: u32;
 	textures: GLuint[];
-	fbos: GLuint[];
 	depth: GLuint;
+	targets: gfx.Target[];
 }

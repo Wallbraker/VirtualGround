@@ -7,3 +7,4 @@
 module ground.openxr;
 
 public import ground.openxr.enumerate;
+public import ground.openxr.loop;
