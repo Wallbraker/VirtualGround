@@ -9,7 +9,7 @@ module ground.openxr.loop;
 import lib.gl.gl45;
 import amp.openxr;
 
-import gfx = [charge.gfx, ground.gfx.view];
+import gfx = charge.gfx;
 import math = charge.math;
 
 import ground.program;

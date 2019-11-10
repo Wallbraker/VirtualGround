@@ -10,7 +10,7 @@ import lib.gl.gl45;
 import core.c.stdio;
 
 import sys = charge.sys;
-import gfx = [charge.gfx, ground.gfx.view];
+import gfx = charge.gfx;
 import math = charge.math;
 
 import watt.math;

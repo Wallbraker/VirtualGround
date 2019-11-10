@@ -15,15 +15,15 @@ import lib.gl.funcs;
 import lib.gl.enums;
 
 import amp.egl;
-import amp.egl.loader;
 import amp.openxr;
 import amp.openxr.loader;
 
 import charge.core.openxr;
-import gfx = [charge.gfx, ground.gfx.view];
-import math = charge.math;
+import core = charge.core;
+import gfx = charge.gfx;
 
 import ground.program;
+import ground.game;
 import ground.actions;
 import ground.openxr;
 import ground.egl;
@@ -32,7 +32,10 @@ import ground.gfx;
 
 fn main(args: string[]) i32
 {
-	XrResult ret;
+/*
+	g := new WindowGame(args);
+	return g.loop();
+*/
 	p: Program = new Program();
 
 	scope (exit) {

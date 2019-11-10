@@ -74,11 +74,6 @@ public:
 	{
 	}
 
-	override fn initSubSystem(flag: Flag)
-	{
-		throw new Exception("Flag not supported");
-	}
-
 	fn close()
 	{
 		closeDg();
