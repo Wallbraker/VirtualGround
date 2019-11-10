@@ -6,6 +6,8 @@
  */
 module ground.game;
 
+import watt.math : PIf;
+
 import core = charge.core;
 import gfx = charge.gfx;
 import ctl = charge.ctl;
@@ -42,30 +44,139 @@ class WrapperScene : scene.Simple
 public:
 	s: Scene;
 
+	// Rotation stuff.
+	isDragging: bool;
+	camPosition: math.Point3f;
+	camRotation: math.Quatf;
+	camSpeed: f32 = 0.2f;
+	aa: gfx.AA;
+
+
+protected:
+	mCamHeading, mCamPitch, distance: f32;
+	mCamUp, mCamFore, mCamBack, mCamLeft, mCamRight: bool;
+
 
 public:
 	this(app: scene.ManagerApp)
 	{
 		super(app, Type.Game);
 		s = new Scene();
+
+		aa.kind = gfx.AA.Kind.MSAA4;
+		camRotation = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+		camPosition = math.Point3f.opCall(0.0f, 1.6f, 0.0f);
 	}
 
 	override fn render(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
 		viewInfo.ensureValidFov(85, t);
-		viewInfo.position = math.Point3f.opCall(0.0f, 1.6f, 0.0f);
-		viewInfo.rotation = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
-		s.renderView(t, ref viewInfo);
+		viewInfo.position = camPosition;
+		viewInfo.rotation = camRotation;
+
+		// Always use the AA, it supports non-aa.
+		aa.bind(t);
+		s.renderView(aa.fbo, ref viewInfo);
+		aa.resolveToAndBind(t);
 	}
 
 	override fn close()
 	{
+		aa.close();
 		s.close();
 		s = null;
 	}
 
-	override fn keyDown(ctl.Keyboard, int)
+	override fn logic()
 	{
-		mManager.closeMe(this);
+		camRotation = math.Quatf.opCall(mCamHeading, mCamPitch, 0.0f);
+		sum: math.Vector3f;
+
+		if (mCamFore != mCamBack) {
+			v: math.Vector3f;
+			v.z = mCamBack ? 1.0f : -1.0f;
+			sum += camRotation * v;
+		}
+
+		if (mCamLeft != mCamRight) {
+			v: math.Vector3f;
+			v.x = mCamRight ? 1.0f : -1.0f;
+			sum += camRotation * v;
+		}
+
+		if (mCamUp) {
+			sum.y += 1;
+		}
+
+		if (sum.lengthSqrd() != 0.f) {
+			sum.normalize();
+			sum.scale(camSpeed);
+			camPosition += sum;
+		}
+	}
+
+	override fn keyDown(ctl.Keyboard, keycode: int)
+	{
+		switch (keycode) {
+		case 27: mManager.closeMe(this); break;
+		case 32: mCamUp = true; break;
+		case 'w': mCamFore = true; break;
+		case 's': mCamBack = true; break;
+		case 'a': mCamLeft = true; break;
+		case 'd': mCamRight = true; break;
+		case 'o': aa.toggle(); break;
+		default:
+		}
+	}
+
+	override fn keyUp(ctl.Keyboard, keycode: int)
+	{
+		switch (keycode) {
+		case 32: mCamUp = false; break;
+		case 'w': mCamFore = false; break;
+		case 's': mCamBack = false; break;
+		case 'a': mCamLeft = false; break;
+		case 'd': mCamRight = false; break;
+		default:
+		}
+	}
+
+	override fn mouseMove(m: ctl.Mouse, x: int, y: int)
+	{
+		if (isDragging) {
+			mCamHeading += x * -0.003f;
+			mCamPitch += y * -0.003f;
+		}
+
+		if (mCamPitch < -(PIf/2)) mCamPitch = -(PIf/2);
+		if (mCamPitch >  (PIf/2)) mCamPitch =  (PIf/2);
+	}
+
+	override fn mouseDown(m: ctl.Mouse, button: int)
+	{
+		switch (button) {
+		case 1:
+			m.setRelativeMode(true);
+			isDragging = true;
+			break;
+		case 4: // Mouse wheel up.
+			distance -= 0.1f;
+			if (distance < 0.0f) {
+				distance = 0.0f;
+			}
+			break;
+		case 5: // Mouse wheel down.
+			distance += 0.1f;
+			break;
+		default:
+		}
+	}
+
+	override fn mouseUp(m: ctl.Mouse, button: int)
+	{
+		if (button == 1) {
+			isDragging = false;
+			m.setRelativeMode(false);
+		}
 	}
 }
