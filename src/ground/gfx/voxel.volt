@@ -11,15 +11,81 @@ import lib.gl.gl45;
 import core = charge.core;
 import math = charge.math;
 import gfx = charge.gfx;
+import sys = charge.sys;
 import charge.gfx.gl;
 
 
+/*!
+ * Dereference and reference helper function.
+ *
+ * @param dec Object to dereference passed by reference, set to `inc`.
+ * @param inc Object to reference.
+ */
+fn reference(ref dec: VoxelBuffer, inc: VoxelBuffer)
+{
+	if (inc !is null) { inc.incRef(); }
+	if (dec !is null) { dec.decRef(); }
+	dec = inc;
+}
 
+/*!
+ * Closes and sets reference to null.
+ *
+ * @param obj Object to be destroyed.
+ */
+fn destroy(ref obj: VoxelBufferBuilder)
+{
+	if (obj !is null) { obj.close(); obj = null; }
+}
+
+/*!
+ * Voxel buffer containing both quad data and line vertices.
+ */
+class VoxelBuffer : gfx.Buffer
+{
+public:
+	numQuadDatas: GLsizei;
+	numLineVertices: GLsizei;
+
+
+public:
+	global fn make(name: string, vb: VoxelBufferBuilder) VoxelBuffer
+	{
+		dummy: void*;
+		buffer := cast(VoxelBuffer)sys.Resource.alloc(
+			typeid(VoxelBuffer), uri, name, 0, out dummy);
+		buffer.__ctor(0, 0, 0, 0);
+		buffer.update(vb);
+		return buffer;
+	}
+
+	fn update(vb: VoxelBufferBuilder)
+	{
+		deleteBuffers();
+		vb.bake(out vao, out buf, out numQuadDatas, out numLineVertices);
+	}
+
+
+protected:
+	this(vao: GLuint, buf: GLuint, numQuadDatas: GLsizei, numLineVertices: GLsizei)
+	{
+		this.numQuadDatas = numQuadDatas;
+		this.numLineVertices = numLineVertices;
+		super(vao, buf);
+	}
+
+	override fn deleteBuffers()
+	{
+		super.deleteBuffers();
+		numQuadDatas = 0;
+		numLineVertices = 0;
+	}
+}
 
 /*!
  * For building a voxel quad buffer.
  */
-class VoxelQuadBuilder : gfx.Builder
+class VoxelBufferBuilder : gfx.Builder
 {
 public:
 	//! Which side of the cube is this quad.
@@ -33,13 +99,27 @@ public:
 		ZP,
 	}
 
+	//! Layout of the line vertices.
+	struct LineVertex
+	{
+		x, y, z: f32;
+		color: math.Color4b;
+	}
+
 	//! Layout of the data in the buffer.
-	struct Data
+	struct QuadData
 	{
 		x_y: u32;
 		z_t: u32;
 		rgb_face: u32;
 	}
+
+	enum QaudStride = cast(GLsizei)typeid(QuadData).size;
+	enum LineStride = cast(GLsizei)typeid(LineVertex).size;
+
+
+public:
+	numQuadDatas: GLsizei;
 
 
 public:
@@ -48,24 +128,43 @@ public:
 		super();
 	}
 
-	alias add = gfx.Builder.add;
+	fn addLineVertex(x: f32, y: f32, z: f32, color: math.Color4b)
+	{
+		lv: LineVertex;
+		lv.x = x;
+		lv.y = y;
+		lv.z = z;
+		lv.color = color;
 
-	fn add(x: i32, y: i32, z: i32, side: Side, texture: GLuint, color: math.Color4b)
+		addLineVertex(lv);
+	}
+
+	fn addLineVertex(lv: LineVertex)
+	{
+		add(cast(void*)&lv, typeid(lv).size);
+	}
+
+	fn switchToLines()
+	{
+		numQuadDatas = cast(GLsizei)length / QaudStride;
+	}
+
+	fn addQuad(x: i32, y: i32, z: i32, side: Side, texture: GLuint, color: math.Color4b)
 	{
 		// Bake side into the alpha channel.
 		color.a = cast(u8)side;
 
-		q: Data;
+		q: QuadData;
 		q.x_y = cast(u32)(x | (y << 16));
 		q.z_t = cast(u32)(z | cast(i32)(texture << 16));
 		q.rgb_face = color.toABGR();
 
-		add(q);
+		addQuad(q);
 	}
 
-	fn add(quad: Data)
+	fn addQuad(q: QuadData)
 	{
-		add(cast(void*)&quad, typeid(Data).size);
+		add(cast(void*)&q, typeid(q).size);
 	}
 
 	final fn bake(out buf: GLuint, out num: GLsizei)
@@ -74,11 +173,37 @@ public:
 		glCreateBuffers(1, &buf);
 		glNamedBufferData(buf, cast(GLsizeiptr)length, ptr, GL_STATIC_DRAW);
 
-		stride := cast(GLsizei)typeid(Data).size;
+		stride := cast(GLsizei)typeid(QuadData).size;
 		num = (cast(GLsizei)length / stride) * 6;
 	}
-}
 
+	final fn bake(out vao: GLuint, out buf: GLuint, out numQuadDatas: GLsizei, out numLineVertices: GLsizei)
+	{
+		numQuadDatas = this.numQuadDatas;
+
+		// Setup vertex buffer and upload the data.
+		glCreateBuffers(1, &buf);
+		glNamedBufferData(buf, cast(GLsizeiptr)length, ptr, GL_STATIC_DRAW);
+
+		glCreateVertexArrays(1, &vao);
+
+		linesOffset := cast(GLsizei)(numQuadDatas * QaudStride);
+		numLineVertices = (cast(GLsizei)length - linesOffset) / LineStride;
+
+		glVertexArrayVertexBuffer(vao, 0, buf, linesOffset, LineStride);
+
+		glEnableVertexArrayAttrib(vao, 0);
+		glEnableVertexArrayAttrib(vao, 2);
+
+		glVertexArrayAttribBinding(vao, 0, 0);
+		glVertexArrayAttribBinding(vao, 2, 0);
+
+		posOffset := cast(GLuint)0;
+		colorOffset := cast(GLuint)typeid(f32).size * 3;
+		glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, posOffset);
+		glVertexArrayAttribFormat(vao, 2, 4, GL_UNSIGNED_BYTE, GL_TRUE, colorOffset);
+	}
+}
 
 /*!
  * Shader to be used with the vertex format in this file.
@@ -86,7 +211,6 @@ public:
  * It has one shader uniform called 'matrix' that is the.
  */
 global voxelShader: gfx.Shader;
-global voxelTexture: gfx.Texture;
 global voxelSampler: GLuint;
 global voxelIndexBuffer: GLuint;
 global voxelVAO: GLuint;
@@ -97,10 +221,6 @@ global this()
 {
 	core.addInitAndCloseRunners(initVoxel, closeVoxel);
 }
-
-enum LogSize : u32 = 8;
-enum MaxSize : u32 = 1 << LogSize;
-enum DataSize = MaxSize * MaxSize;
 
 fn initVoxel()
 {
@@ -120,33 +240,11 @@ fn initVoxel()
 	                    fragmentShader45,
 	                    null,
 	                    null);
-
-	voxelTexture = gfx.Texture2D.makeRGBA8("ground/voxel/frame", MaxSize, MaxSize, LogSize);
-	data: math.Color4b[DataSize];
-
-	foreach (level; 0 .. LogSize) {
-		dim := MaxSize >> level;
-		foreach (y; 0 .. dim) {
-			foreach (x; 0 .. dim) {
-				if (x == 0 || y == 0 || x == (dim - 1) || y == (dim - 1)) {
-					data[x + y * dim] = math.Color4b.Black;
-				} else {
-					data[x + y * dim] = math.Color4b.White;
-				}
-			}
-		}
-
-		glTextureSubImage2D(voxelTexture.id, cast(GLint)level, 0, 0, cast(GLint)dim, cast(GLint)dim, GL_RGBA, GL_UNSIGNED_BYTE, cast(void*)data.ptr);
-	}
-
-	//glGenerateTextureMipmap(voxelTexture.id);
-	glTextureSubImage2D(voxelTexture.id, cast(GLint)(LogSize - 1), 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, cast(void*)&math.Color4b.White);
 }
 
 fn closeVoxel()
 {
 	gfx.destroy(ref voxelShader);
-	gfx.reference(ref voxelTexture, null);
 
 	if (voxelIndexBuffer) { glDeleteBuffers(1, &voxelIndexBuffer); voxelIndexBuffer = 0; }
 	if (voxelVAO) { glDeleteVertexArrays(1, &voxelVAO); voxelVAO = 0; }

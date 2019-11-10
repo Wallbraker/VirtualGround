@@ -24,10 +24,9 @@ class Scene
 public:
 	texLogo: gfx.Texture;
 	texWhite: gfx.Texture;
-	buf: gfx.SimpleBuffer;
-
-	mVoxelStore: GLuint;
-	mNumVerticies: GLsizei;
+	mVoxelTestBuf: VoxelBuffer;
+	mVoxelHackBuf: VoxelBuffer;
+	mSquareBuf: gfx.SimpleBuffer;
 
 
 public:
@@ -50,23 +49,25 @@ public:
 		b.add(fXW, 0.0f, fZH, 40.0f, 40.0f);
 		b.add(fX,  0.0f, fZH,  0.0f, 40.0f);
 		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
-		buf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
+		mSquareBuf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
 		gfx.destroy(ref b);
 
-		hackedScene(out mVoxelStore, out mNumVerticies);
+		hackedScene(out mVoxelHackBuf);
 /*
-		f := import("test.vox");
-		qb := loadFromData(cast(const(u8)[])import("test.vox"));
-		qb.bake(out mVoxelStore, out mNumVerticies);
-		qb.close();
+		f := cast(const(u8)[])import("test.vox");
+		vb := loadFromData(f);
+		mVoxelTestBuf = VoxelBuffer.make("ground/voxel/test", vb);
+		destroy(ref vb);
 */
 	}
 
 	fn close()
 	{
-		gfx.reference(ref buf, null);
+		reference(ref  mVoxelTestBuf, null);
+		reference(ref  mVoxelHackBuf, null);
 		gfx.reference(ref texLogo, null);
 		gfx.reference(ref texWhite, null);
+		gfx.reference(ref mSquareBuf, null);
 	}
 
 	fn renderView(target: gfx.Target, ref viewInfo: gfx.ViewInfo)
@@ -86,8 +87,16 @@ public:
 		glEnable(GL_DEPTH_TEST);
 		glBindSampler(0, voxelSampler);
 
-		drawSquare(ref vp);
-		drawVoxel(ref vp);
+		if (mVoxelTestBuf !is null) {
+			drawVoxel(ref vp, mVoxelTestBuf,
+			          math.Point3f.opCall(-32.0f, -18.0f, -50.0f),
+			          math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f));
+		} else {
+			drawVoxel(ref vp, mVoxelHackBuf,
+			          math.Point3f.opCall(-3.0f, -1.0f, -3.0f),
+			          math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f));
+			drawSquare(ref vp);
+		}
 
 		glBindSampler(0, 0);
 		glDisable(GL_DEPTH_TEST);
@@ -110,17 +119,15 @@ public:
 		gfx.simpleShader.bind();
 		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
 
-		glBindVertexArray(buf.vao);
+		glBindVertexArray(mSquareBuf.vao);
 		texLogo.bind();
-		glDrawArrays(GL_TRIANGLES, 0, buf.num);
+		glDrawArrays(GL_TRIANGLES, 0, mSquareBuf.num);
 		texLogo.unbind();
 		glBindVertexArray(0);
 	}
 
-	fn drawVoxel(ref vp: math.Matrix4x4d)
+	fn drawVoxel(ref vp: math.Matrix4x4d, buf: VoxelBuffer, pos: math.Point3f, rot: math.Quatf)
 	{
-		pos := math.Point3f.opCall(-3.0f, -1.0f, -3.0f);
-		rot := math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 		rot.normalize();
 
 		model: math.Matrix4x4d;
@@ -129,18 +136,39 @@ public:
 		matrix: math.Matrix4x4f;
 		matrix.setToMultiplyAndTranspose(ref vp, ref model);
 
+		// Shared for everything.
+		texWhite.bind();
+
+		// Draw the voxels.
 		voxelShader.bind();
 		voxelShader.matrix4("u_matrix", 1, false, ref matrix);
 
-		voxelTexture.bind();
 		glBindVertexArray(voxelVAO);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(1.0f, 1.0f);
 
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mVoxelStore);
-		glDrawElements(GL_TRIANGLES, mNumVerticies, GL_UNSIGNED_INT, null);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mVoxelStore);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buf.buf);
+		glDrawElements(GL_TRIANGLES, buf.numQuadDatas * 6, GL_UNSIGNED_INT, null);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 
+		glDisable(GL_POLYGON_OFFSET_FILL);
 		glBindVertexArray(0);
-		voxelTexture.unbind();
+
+		// Draw the lines.
+		gfx.simpleShader.bind();
+		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
+
+		glBindVertexArray(buf.vao);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glDrawArrays(GL_LINES, 0, buf.numLineVertices);
+
+		glDisable(GL_BLEND);
+		glBindVertexArray(0);
+
+		// Finally remove the texture.
+		texWhite.unbind();
 	}
 
 
@@ -161,9 +189,9 @@ private:
 	}
 }
 
-fn hackedScene(out buf: GLuint, out num: GLsizei)
+fn hackedScene(out buf: VoxelBuffer)
 {
-	b := new VoxelQuadBuilder();
+	b := new VoxelBufferBuilder();
 
 	W := math.Color4b.White;
 	R := math.Color4b.from(1.0f, 0.5f, 0.5f, 1.0f);
@@ -171,45 +199,48 @@ fn hackedScene(out buf: GLuint, out num: GLsizei)
 	B := math.Color4b.from(0.5f, 0.5f, 1.0f, 1.0f);
 	tex := 0x0_u32;
 
-	with (VoxelQuadBuilder.Side) {
-		b.add(0, 1, 1, XP, tex, W);
-		b.add(0, 1, 2, XP, tex, R);
-		b.add(0, 1, 3, XP, tex, G);
-		b.add(0, 1, 4, XP, tex, B);
+	with (VoxelBufferBuilder.Side) {
+		b.addQuad(0, 1, 1, XP, tex, W);
+		b.addQuad(0, 1, 2, XP, tex, R);
+		b.addQuad(0, 1, 3, XP, tex, G);
+		b.addQuad(0, 1, 4, XP, tex, B);
 
-		b.add(1, 1, 0, ZP, tex, B);
-		b.add(2, 1, 0, ZP, tex, W);
-		b.add(3, 1, 0, ZP, tex, R);
-		b.add(4, 1, 0, ZP, tex, G);
+		b.addQuad(1, 1, 0, ZP, tex, B);
+		b.addQuad(2, 1, 0, ZP, tex, W);
+		b.addQuad(3, 1, 0, ZP, tex, R);
+		b.addQuad(4, 1, 0, ZP, tex, G);
 
-		b.add(1, 0, 1, YP, tex, R);
-		b.add(1, 0, 2, YP, tex, W);
-		b.add(1, 0, 3, YP, tex, B);
-		b.add(1, 0, 4, YP, tex, G);
-		b.add(2, 0, 1, YP, tex, G);
-		b.add(2, 0, 2, YP, tex, R);
-		b.add(2, 0, 3, YP, tex, W);
-		b.add(2, 0, 4, YP, tex, B);
-		b.add(3, 0, 1, YP, tex, B);
-		b.add(3, 0, 2, YP, tex, G);
-		b.add(3, 0, 3, YP, tex, R);
-		b.add(3, 0, 4, YP, tex, W);
-		b.add(4, 0, 1, YP, tex, W);
-		b.add(4, 0, 2, YP, tex, B);
-		b.add(4, 0, 3, YP, tex, G);
-		b.add(4, 0, 4, YP, tex, R);
+		b.addQuad(1, 0, 1, YP, tex, R);
+		b.addQuad(1, 0, 2, YP, tex, W);
+		b.addQuad(1, 0, 3, YP, tex, B);
+		b.addQuad(1, 0, 4, YP, tex, G);
+		b.addQuad(2, 0, 1, YP, tex, G);
+		b.addQuad(2, 0, 2, YP, tex, R);
+		b.addQuad(2, 0, 3, YP, tex, W);
+		b.addQuad(2, 0, 4, YP, tex, B);
+		b.addQuad(3, 0, 1, YP, tex, B);
+		b.addQuad(3, 0, 2, YP, tex, G);
+		b.addQuad(3, 0, 3, YP, tex, R);
+		b.addQuad(3, 0, 4, YP, tex, W);
+		b.addQuad(4, 0, 1, YP, tex, W);
+		b.addQuad(4, 0, 2, YP, tex, B);
+		b.addQuad(4, 0, 3, YP, tex, G);
+		b.addQuad(4, 0, 4, YP, tex, R);
 
-		b.add(0, 1, 0, YP, tex, B);
-		b.add(1, 1, 0, YP, tex, W);
-		b.add(2, 1, 0, YP, tex, R);
-		b.add(3, 1, 0, YP, tex, G);
-		b.add(4, 1, 0, YP, tex, B);
-		b.add(0, 1, 1, YP, tex, G);
-		b.add(0, 1, 2, YP, tex, R);
-		b.add(0, 1, 3, YP, tex, W);
-		b.add(0, 1, 4, YP, tex, B);
+		b.addQuad(0, 1, 0, YP, tex, B);
+		b.addQuad(1, 1, 0, YP, tex, W);
+		b.addQuad(2, 1, 0, YP, tex, R);
+		b.addQuad(3, 1, 0, YP, tex, G);
+		b.addQuad(4, 1, 0, YP, tex, B);
+		b.addQuad(0, 1, 1, YP, tex, G);
+		b.addQuad(0, 1, 2, YP, tex, B);
+		b.addQuad(0, 1, 3, YP, tex, W);
+		b.addQuad(0, 1, 4, YP, tex, R);
 	}
 
-	b.bake(out buf, out num);
-	b.close();
+	b.switchToLines();
+
+	buf = VoxelBuffer.make("ground/voxel/hack", b);
+
+	destroy(ref b);
 }

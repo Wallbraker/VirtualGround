@@ -8,18 +8,19 @@ module ground.gfx.magica;
 
 import watt = [watt.io.file];
 import math = charge.math;
+import gfx = charge.gfx;
 
 import ground.gfx.voxel;
 
 import io = watt.io;
 
 
-fn loadFile(filename: string) VoxelQuadBuilder
+fn loadFile(filename: string) VoxelBufferBuilder
 {
 	return loadFromData(cast(u8[])watt.read(filename));
 }
 
-fn loadFromData(arr: const(u8)[]) VoxelQuadBuilder
+fn loadFromData(arr: const(u8)[]) VoxelBufferBuilder
 {
 	ptr := cast(const(u8)*)arr.ptr;
 	end := cast(const(u8)*)arr.ptr + arr.length;
@@ -55,15 +56,18 @@ fn loadFromData(arr: const(u8)[]) VoxelQuadBuilder
 	}
 
 	// Copy the data into the buffer.
+	buf.setSize(x, y, z);
 	buf.setColors(colors);
 	foreach (voxel; voxels) {
 		buf.setVoxel(voxel);
 	}
 
-	builder := new VoxelQuadBuilder();
-	buf.makeQuads(builder);
+	vb := new VoxelBufferBuilder();
+	buf.makeQuads(vb);
+	vb.switchToLines();
+	buf.makeLines(vb);
 
-	return builder;
+	return vb;
 }
 
 global buf: MagicaBuilder;
@@ -112,11 +116,21 @@ public:
 
 public:
 	buf: u8[Size];
+	sizeX, sizeY, sizeZ: i32;
+
 	// Copy of the palette so this struct doesn't have pointers.
 	colors: math.Color4b[256];
 
 
 public:
+	fn setSize(x: u32, y: u32, z: u32)
+	{
+		// Flipped y and z axis.
+		sizeX = cast(i32)x;
+		sizeY = cast(i32)z;
+		sizeZ = cast(i32)y;
+	}
+
 	fn setColors(colors: math.Color4b[])
 	{
 		this.colors[] = colors[];
@@ -124,12 +138,8 @@ public:
 
 	fn setVoxel(v: Voxel)
 	{
-		buf[index(v)] = v.color;
-	}
-
-	fn index(v: Voxel) i32
-	{
-		return index(v.x, v.z, v.y);
+		// Flipped y and z axis.
+		buf[index(v.x, v.z, v.y)] = v.color;
 	}
 
 	fn index(x: i32, y: i32, z: i32) i32
@@ -137,12 +147,12 @@ public:
 		return StartOffset + x * StrideX + y * StrideY + z * StrideZ;
 	}
 
-	fn makeQuads(b: VoxelQuadBuilder)
+	fn makeQuads(b: VoxelBufferBuilder)
 	{
-		foreach (z; 0 .. 256) {
-			foreach (y; 0 .. 256) {
+		foreach (z; 0 .. sizeZ) {
+			foreach (y; 0 .. sizeY) {
 				i := index(0, y, z);
-				foreach (x; 0 .. 256) {
+				foreach (x; 0 .. sizeX) {
 					handleQuadVoxel(b, x, y, z, i);
 					i++;
 				}
@@ -150,7 +160,7 @@ public:
 		}
 	}
 
-	fn handleQuadVoxel(b: VoxelQuadBuilder, x: i32, y: i32, z: i32, i: i32)
+	fn handleQuadVoxel(b: VoxelBufferBuilder, x: i32, y: i32, z: i32, i: i32)
 	{
 		c := buf[i];
 		if (c == 0) {
@@ -158,25 +168,191 @@ public:
 		}
 
 		if (buf[i + XN] == 0) {
-			b.add(x, y, z, VoxelQuadBuilder.Side.XN, 0, colors[c]);
+			b.addQuad(x, y, z, VoxelBufferBuilder.Side.XN, 0, colors[c]);
 		}
 		if (buf[i + XP] == 0) {
-			b.add(x, y, z, VoxelQuadBuilder.Side.XP, 0, colors[c]);
+			b.addQuad(x, y, z, VoxelBufferBuilder.Side.XP, 0, colors[c]);
 		}
 		if (buf[i + YN] == 0) {
-			b.add(x, y, z, VoxelQuadBuilder.Side.YN, 0, colors[c]);
+			b.addQuad(x, y, z, VoxelBufferBuilder.Side.YN, 0, colors[c]);
 		}
 		if (buf[i + YP] == 0) {
-			b.add(x, y, z, VoxelQuadBuilder.Side.YP, 0, colors[c]);
+			b.addQuad(x, y, z, VoxelBufferBuilder.Side.YP, 0, colors[c]);
 		}
 		if (buf[i + ZN] == 0) {
-			b.add(x, y, z, VoxelQuadBuilder.Side.ZN, 0, colors[c]);
+			b.addQuad(x, y, z, VoxelBufferBuilder.Side.ZN, 0, colors[c]);
 		}
 		if (buf[i + ZP] == 0) {
-			b.add(x, y, z, VoxelQuadBuilder.Side.ZP, 0, colors[c]);
+			b.addQuad(x, y, z, VoxelBufferBuilder.Side.ZP, 0, colors[c]);
+		}
+	}
+
+	fn makeLines(b: VoxelBufferBuilder)
+	{
+		foreach (z; 0 .. sizeZ + 1) {
+			foreach (y; 0 .. sizeY + 1) {
+				i := index(0, y, z);
+				handleLineX(b, i, y, z);
+			}
+		}
+
+		foreach (z; 0 .. sizeZ + 1) {
+			foreach (x; 0 .. sizeX + 1) {
+				i := index(x, 0, z);
+				handleLineY(b, i, x, z);
+			}
+		}
+
+		foreach (y; 0 .. sizeY + 1) {
+			foreach (x; 0 .. sizeX + 1) {
+				i := index(x, y, 0);
+				handleLineZ(b, i, x, y);
+			}
+		}
+	}
+
+	enum LineType
+	{
+		None = 0,
+		Highlight = 1,
+		Black = 2,
+		Grey = 3,
+	}
+
+	global lineType: u8[16] = [
+		LineType.None,      // 0000
+		LineType.Highlight, // 0001
+		LineType.Highlight, // 0010
+		LineType.Grey,      // 0011
+		LineType.Highlight, // 0100
+		LineType.Grey,      // 0101
+		LineType.Black,     // 0110
+		LineType.Black,     // 0111
+		LineType.Highlight, // 1000
+		LineType.Black,     // 1001
+		LineType.Grey,      // 1010
+		LineType.Black,     // 1011
+		LineType.Grey,      // 1100
+		LineType.Black,     // 1101
+		LineType.Black,     // 1110
+		LineType.None,      // 1111
+	];
+
+	global lineColors: immutable(math.Color4b)[4] = [
+		{  0,   0,   0,   0}, // None
+		{255, 255, 255,  64}, // Highlight
+		{  0,   0,   0,  64}, // Black
+		{128, 128, 128,  32}, // Grey
+	];
+
+	global lineNudge: immutable(f32)[4] = [
+		0.0f,   // None
+		0.0f,   // Highlight
+		0.003f, // Black
+		0.003f, // Grey
+	];
+
+	fn handleLineX(b: VoxelBufferBuilder, i: i32, y: i32, z: i32)
+	{
+		lines: u8[257];
+
+		foreach (x; 0 .. sizeX) {
+			data: u32;
+			data |= (buf[i] != 0) << 0u;
+			data |= (buf[i + YN] != 0) << 1u;
+			data |= (buf[i + ZN] != 0) << 2u;
+			data |= (buf[i + YN + ZN] != 0) << 3u;
+			lines[x] = lineType[data];
+			i += StrideX;
+		}
+
+		current: u8;
+		foreach (x, line; lines[0 .. sizeX + 1]) {
+			if (current == line) {
+				continue;
+			}
+
+			if (current != 0) {
+				b.addLineVertex(cast(f32)x - lineNudge[current], cast(f32)y, cast(f32)z, lineColors[current]);
+			}
+
+			if (line != 0) {
+				b.addLineVertex(cast(f32)x + lineNudge[line], cast(f32)y, cast(f32)z, lineColors[line]);
+			}
+
+			current = line;
+		}
+	}
+
+	fn handleLineY(b: VoxelBufferBuilder, i: i32, x: i32, z: i32)
+	{
+		lines: u8[257];
+
+		foreach (y; 0 .. sizeY) {
+			data: u32;
+			data |= (buf[i] != 0) << 0u;
+			data |= (buf[i + XN] != 0) << 1u;
+			data |= (buf[i + ZN] != 0) << 2u;
+			data |= (buf[i + XN + ZN] != 0) << 3u;
+			lines[y] = lineType[data];
+			i += StrideY;
+		}
+
+		current: u8;
+		foreach (y, line; lines[0 .. sizeY + 1]) {
+			if (current == line) {
+				continue;
+			}
+
+			if (current != 0) {
+				b.addLineVertex(cast(f32)x, cast(f32)y - lineNudge[current], cast(f32)z, lineColors[current]);
+			}
+
+			if (line != 0) {
+				b.addLineVertex(cast(f32)x, cast(f32)y + lineNudge[line], cast(f32)z, lineColors[line]);
+			}
+
+			current = line;
+		}
+	}
+
+	fn handleLineZ(b: VoxelBufferBuilder, i: i32, x: i32, y: i32)
+	{
+		lines: u8[257];
+
+		foreach (z; 0 .. sizeZ) {
+			data: u32;
+			data |= (buf[i] != 0) << 0u;
+			data |= (buf[i + XN] != 0) << 1u;
+			data |= (buf[i + YN] != 0) << 2u;
+			data |= (buf[i + XN + YN] != 0) << 3u;
+			lines[z] = lineType[data];
+			i += StrideZ;
+		}
+
+		current: u8;
+		foreach (z, line; lines[0 .. sizeZ + 1]) {
+			if (current == line) {
+				continue;
+			}
+
+			if (current != 0) {
+				b.addLineVertex(cast(f32)x, cast(f32)y, cast(f32)z - lineNudge[current], lineColors[current]);
+			}
+
+			if (line != 0) {
+				b.addLineVertex(cast(f32)x, cast(f32)y, cast(f32)z + lineNudge[line], lineColors[line]);
+			}
+
+			current = line;
 		}
 	}
 }
+
+
+@mangledName("llvm.ctpop.i32")
+fn countSetBits(bits: u32) u32;
+
 
 global math.Color4b[] defaultColors = [
 	{255, 255, 255, 255}, {255, 255, 204, 255}, {255, 255, 153, 255},
