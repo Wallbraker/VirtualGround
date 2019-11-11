@@ -29,7 +29,7 @@ fn loadFromData(arr: const(u8)[]) VoxelBufferBuilder
 	x, y, z : u32;
 	voxels : Voxel[];
 	numVoxels : size_t;
-	colors := defaultColors;
+	colors := defaultColors[1 .. $];
 
 	while (cast(size_t)ptr < cast(size_t)end) {
 		c := cast(const(Chunk)*)ptr;
@@ -48,7 +48,7 @@ fn loadFromData(arr: const(u8)[]) VoxelBufferBuilder
 			voxels = (cast(Voxel*)(ptr + 4))[0 .. numVoxels];
 			break;
 		case "RGBA":
-			colors = (cast(math.Color4b*)ptr)[0 .. 256];
+			colors = (cast(math.Color4b*)ptr)[0 .. 255];
 			break;
 		default:
 		}
@@ -133,7 +133,7 @@ public:
 
 	fn setColors(colors: math.Color4b[])
 	{
-		this.colors[] = colors[];
+		this.colors[1 .. $] = colors[..];
 	}
 
 	fn setVoxel(v: Voxel)
