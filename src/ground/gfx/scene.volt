@@ -88,13 +88,24 @@ public:
 		glBindSampler(0, voxelSampler);
 
 		if (mVoxelTestBuf !is null) {
+			rot := math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+
+
+			center := math.Point3f.opCall(4.5f, 4.5f, 4.5f);
+
 			drawVoxel(ref vp, mVoxelTestBuf,
-			          math.Point3f.opCall(-32.0f, -18.0f, -50.0f),
-			          math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f));
+			          math.Point3f.opCall(0.0f, 0.0f, -8.0f), rot,
+			          math.Vector3f.opCall(1.0, 1.0, 1.0), center);
+			drawVoxel(ref vp, mVoxelTestBuf,
+			          math.Point3f.opCall(0.0f, 0.0f, -1.0f), rot,
+			          math.Vector3f.opCall(0.005, 0.005, 0.005), center);
+			drawSquare(ref vp);
 		} else {
 			drawVoxel(ref vp, mVoxelHackBuf,
-			          math.Point3f.opCall(-3.0f, -1.0f, -3.0f),
-			          math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f));
+			          math.Point3f.opCall(0.0f, 0.0f, 0.0f),
+			          math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f),
+			          math.Vector3f.opCall(1.0f, 1.0f, 1.0f),
+			          math.Point3f.opCall(3.0f, 1.0f, 3.0f));
 			drawSquare(ref vp);
 		}
 
@@ -126,12 +137,17 @@ public:
 		glBindVertexArray(0);
 	}
 
-	fn drawVoxel(ref vp: math.Matrix4x4d, buf: VoxelBuffer, pos: math.Point3f, rot: math.Quatf)
+	fn drawVoxel(ref vp: math.Matrix4x4d,
+	             buf: VoxelBuffer,
+	             pos: math.Point3f,
+	             rot: math.Quatf,
+	             scale: math.Vector3f,
+	             center: math.Point3f)
 	{
 		rot.normalize();
 
 		model: math.Matrix4x4d;
-		model.setToModel(ref pos, ref rot);
+		model.setToModel(ref pos, ref rot, ref scale, ref center);
 
 		matrix: math.Matrix4x4f;
 		matrix.setToMultiplyAndTranspose(ref vp, ref model);
