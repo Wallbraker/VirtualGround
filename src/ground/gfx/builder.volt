@@ -36,9 +36,10 @@ struct Voxel
 struct VoxelMeshMaker
 {
 public:
-	enum DimX = cast(i32)(256 + 2);
-	enum DimY = cast(i32)(256 + 2);
-	enum DimZ = cast(i32)(256 + 2);
+	enum WorkSize = 126;
+	enum DimX = cast(i32)(WorkSize + 2);
+	enum DimY = cast(i32)(WorkSize + 2);
+	enum DimZ = cast(i32)(WorkSize + 2);
 	enum StrideX = cast(i32)(1);
 	enum StrideY = cast(i32)(DimX);
 	enum StrideZ = cast(i32)(DimX * DimY);
@@ -120,6 +121,10 @@ public:
 
 	fn setSize(x: u32, y: u32, z: u32)
 	{
+		assert(x > 0); assert(x <= WorkSize);
+		assert(y > 0); assert(y <= WorkSize);
+		assert(z > 0); assert(z <= WorkSize);
+
 		sizeX = cast(i32)x;
 		sizeY = cast(i32)y;
 		sizeZ = cast(i32)z;
