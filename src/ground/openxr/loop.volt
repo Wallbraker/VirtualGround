@@ -39,7 +39,7 @@ fn oneLoop(ref oxr: OpenXR, scene: Scene) bool
 	}
 
 	// Returns false if we should quit.
-	if (!oxr.updateActions()) {
+	if (!oxr.updateActions(predictedDisplayTime)) {
 		return false;
 	}
 

@@ -38,12 +38,6 @@ public:
 	subPathRight: XrPath;
 	subPathGamePad: XrPath;
 
-	gameplayActionSet: XrActionSet;
-	aimPoseAction: XrAction;
-	gripPoseAction: XrAction;
-	grabAction: XrAction;
-	quitAction: XrAction;
-
 	move: MoveActions;
 	gameplay: GameplayActions;
 
@@ -61,9 +55,9 @@ public:
 		io.output.flush();
 	}
 
-	fn updateActions() bool
+	fn updateActions(predictedDisplayTime: XrTime) bool
 	{
-		return .updateActions(this);
+		return .updateActions(this, predictedDisplayTime);
 	}
 }
 
@@ -107,7 +101,7 @@ struct OpenXR
 
 	views: View[];
 
-	updateActions: dg() bool;
+	updateActions: dg(XrTime) bool;
 	log: dg(string);
 }
 

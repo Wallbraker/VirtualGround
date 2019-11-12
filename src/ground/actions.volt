@@ -7,7 +7,10 @@
 module ground.actions;
 
 import amp.openxr;
+import math = charge.math;
+
 import ground.program;
+import ground.gfx.scene;
 
 
 struct MoveActions
@@ -20,7 +23,9 @@ struct MoveActions
 	triangle: XrAction;
 	square: XrAction;
 	circle: XrAction;
+
 	ballPose: XrAction;
+	ballSpace: XrSpace[2];
 }
 
 struct GameplayActions
@@ -30,13 +35,15 @@ struct GameplayActions
 	grab: XrAction;
 	quit: XrAction;
 	aimPose: XrAction;
+	aimSpace: XrSpace[2];
 	gripPose: XrAction;
+	gripSpace: XrSpace[2];
 }
 
-fn updateActions(p: Program) bool
+fn updateActions(p: Program, predictedDisplayTime: XrTime) bool
 {
 	activeActionSet: XrActiveActionSet[2] = [
-		{ p.gameplayActionSet, XR_NULL_PATH },
+		{ p.gameplay.set, XR_NULL_PATH },
 		{ p.move.set, XR_NULL_PATH },
 	];
 
@@ -49,7 +56,7 @@ fn updateActions(p: Program) bool
 
 	getInfo: XrActionStateGetInfo;
 	getInfo.type = XrStructureType.XR_TYPE_ACTION_STATE_GET_INFO;
-	getInfo.action = p.quitAction;
+	getInfo.action = p.gameplay.quit;
 	getInfo.subactionPath = XR_NULL_PATH;
 
 	boolValue: XrActionStateBoolean;
@@ -98,6 +105,38 @@ fn updateActions(p: Program) bool
 	xrGetActionStateBoolean(p.oxr.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		p.log("Select");
+	}
+
+	spaceLocation: XrSpaceLocation;
+	spaceLocation.type = XR_TYPE_SPACE_LOCATION;
+
+	ret: XrResult;
+	foreach (hand; 0 .. 2) {
+		ret = xrLocateSpace(p.move.ballSpace[hand], p.oxr.space, predictedDisplayTime, &spaceLocation);
+		if (ret != XR_SUCCESS) {
+			gPsMvBall[hand].active = false;
+			continue;
+		}
+
+		gPsMvBall[hand].active = true;
+		gPsMvBall[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+	}
+
+	foreach (hand; 0 .. 2) {
+		ret = xrLocateSpace(p.gameplay.gripSpace[hand], p.oxr.space, predictedDisplayTime, &spaceLocation);
+		if (ret != XR_SUCCESS) {
+			gPsMvComplete[hand].active = false;
+			gPsMvControllerOnly[hand].active = false;
+			continue;
+		}
+
+		gPsMvComplete[hand].active = !gPsMvBall[hand].active;
+		gPsMvComplete[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+		gPsMvComplete[hand].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+
+		gPsMvControllerOnly[hand].active = gPsMvBall[hand].active;
+		gPsMvControllerOnly[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+		gPsMvControllerOnly[hand].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
 	}
 
 	return true;
@@ -180,16 +219,16 @@ fn createActions(p: Program) bool
 
 	actionSetInfo.actionSetName[] = "gameplay";
 	actionSetInfo.localizedActionSetName[] = "Gameplay";
-	xrCreateActionSet(p.oxr.instance, &actionSetInfo, &p.gameplayActionSet);
+	xrCreateActionSet(p.oxr.instance, &actionSetInfo, &p.gameplay.set);
 
 	actionSetInfo.actionSetName[] = "move";
 	actionSetInfo.localizedActionSetName[] = "Move Controller";
 	xrCreateActionSet(p.oxr.instance, &actionSetInfo, &p.move.set);
 
-	p.createFloat(p.gameplayActionSet, handSubactionPaths, "grab_object", "Grab Object", ref p.grabAction);
-	p.createBoolean(p.gameplayActionSet, handSubactionPaths, "quit_session", "Quit Session", ref p.quitAction);
-	p.createPose(p.gameplayActionSet, handSubactionPaths, "aim", "Aim Pose", ref p.aimPoseAction);
-	p.createPose(p.gameplayActionSet, handSubactionPaths, "grip", "Grip Pose", ref p.gripPoseAction);
+	p.createFloat(p.gameplay.set, handSubactionPaths, "grab_object", "Grab Object", ref p.gameplay.grab);
+	p.createBoolean(p.gameplay.set, handSubactionPaths, "quit_session", "Quit Session", ref p.gameplay.quit);
+	p.createPose(p.gameplay.set, handSubactionPaths, "aim", "Aim Pose", ref p.gameplay.aimPose);
+	p.createPose(p.gameplay.set, handSubactionPaths, "grip", "Grip Pose", ref p.gameplay.gripPose);
 	p.createBoolean(p.move.set, handSubactionPaths, "start", "Start", ref p.move.start);
 	p.createBoolean(p.move.set, handSubactionPaths, "select", "Select", ref p.move.select);
 	p.createBoolean(p.move.set, handSubactionPaths, "triangle", "Triangle", ref p.move.triangle);
@@ -202,14 +241,14 @@ fn createActions(p: Program) bool
 	// Simple Controller
 	{
 		bindings: XrActionSuggestedBinding[] = [
-			{p.grabAction, selectPath[Side.Left]},
-			{p.grabAction, selectPath[Side.Right]},
-			{p.aimPoseAction, aimPosePath[Side.Left]},
-			{p.aimPoseAction, aimPosePath[Side.Right]},
-			{p.gripPoseAction, gripPosePath[Side.Left]},
-			{p.gripPoseAction, gripPosePath[Side.Right]},
-			{p.quitAction, menuClickPath[Side.Left]},
-			{p.quitAction, menuClickPath[Side.Right]},
+			{p.gameplay.grab, selectPath[Side.Left]},
+			{p.gameplay.grab, selectPath[Side.Right]},
+			{p.gameplay.aimPose, aimPosePath[Side.Left]},
+			{p.gameplay.aimPose, aimPosePath[Side.Right]},
+			{p.gameplay.gripPose, gripPosePath[Side.Left]},
+			{p.gameplay.gripPose, gripPosePath[Side.Right]},
+			{p.gameplay.quit, menuClickPath[Side.Left]},
+			{p.gameplay.quit, menuClickPath[Side.Right]},
 /*
 			{p.vibrateAction, p.hapticPath[Side.Left]},
 			{p.vibrateAction, p.hapticPath[Side.Right]}
@@ -222,12 +261,12 @@ fn createActions(p: Program) bool
 	// PlayStation Move
 	{
 		bindings: XrActionSuggestedBinding[] = [
-			{p.quitAction, menuClickPath[Side.Left]},
-			{p.quitAction, menuClickPath[Side.Right]},
-			{p.aimPoseAction, aimPosePath[Side.Left]},
-			{p.aimPoseAction, aimPosePath[Side.Right]},
-			{p.gripPoseAction, gripPosePath[Side.Left]},
-			{p.gripPoseAction, gripPosePath[Side.Right]},
+			{p.gameplay.quit, menuClickPath[Side.Left]},
+			{p.gameplay.quit, menuClickPath[Side.Right]},
+			{p.gameplay.aimPose, aimPosePath[Side.Left]},
+			{p.gameplay.aimPose, aimPosePath[Side.Right]},
+			{p.gameplay.gripPose, gripPosePath[Side.Left]},
+			{p.gameplay.gripPose, gripPosePath[Side.Right]},
 /*
 			{p.vibrateAction, p.hapticPath[Side.Left]},
 			{p.vibrateAction, p.hapticPath[Side.Right]}
@@ -252,7 +291,7 @@ fn createActions(p: Program) bool
 	}
 
 	actionSets: XrActionSet[2] = [
-		p.gameplayActionSet,
+		p.gameplay.set,
 		p.move.set,
 	];
 
@@ -261,6 +300,25 @@ fn createActions(p: Program) bool
 	attachInfo.countActionSets = cast(u32)actionSets.length;
 	attachInfo.actionSets = actionSets.ptr;
 	xrAttachSessionActionSets(p.oxr.session, &attachInfo);
+
+
+        actionSpaceInfo: XrActionSpaceCreateInfo;
+        actionSpaceInfo.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+	actionSpaceInfo.poseInActionSpace.orientation.w = 1.f;
+
+	// Pose action
+	actionSpaceInfo.action = p.gameplay.gripPose;
+	actionSpaceInfo.subactionPath = handSubactionPaths[0];
+	xrCreateActionSpace(p.oxr.session, &actionSpaceInfo, &p.gameplay.gripSpace[0]);
+	actionSpaceInfo.subactionPath = handSubactionPaths[1];
+	xrCreateActionSpace(p.oxr.session, &actionSpaceInfo, &p.gameplay.gripSpace[1]);
+
+	// Ball pose action
+	actionSpaceInfo.action = p.move.ballPose;
+	actionSpaceInfo.subactionPath = handSubactionPaths[0];
+	xrCreateActionSpace(p.oxr.session, &actionSpaceInfo, &p.move.ballSpace[0]);
+	actionSpaceInfo.subactionPath = handSubactionPaths[1];
+	xrCreateActionSpace(p.oxr.session, &actionSpaceInfo, &p.move.ballSpace[1]);
 
 	return true;
 }
