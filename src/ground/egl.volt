@@ -13,6 +13,8 @@ import amp.egl.loader;
 import lib.gl.gl33;
 import lib.gl.loader;
 
+import charge.gfx.gl;
+
 import ground.program;
 
 
@@ -97,11 +99,9 @@ fn initEGL(p: Program) bool
 		return false;
 	}
 
-	if (false) {
-		p.log(new "Vendor:   ${watt.toString(cast(const(char)*)glGetString(GL_VENDOR))}");
-		p.log(new "Version:  ${watt.toString(cast(const(char)*)glGetString(GL_VERSION))}");
-		p.log(new "Renderer: ${watt.toString(cast(const(char)*)glGetString(GL_RENDERER))}");
-	}
+	// Setup the gfx sub-system.
+	runDetection();
+	printDetection();
 
 	return true;
 }
