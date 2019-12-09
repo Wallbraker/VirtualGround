@@ -89,12 +89,13 @@ fn runOpenXR(args: string[]) i32
 
 fn initOpenXR(p: Program) bool
 {
-	return setupLoader(p) &&
-	       p.oxr.createInstance() &&
+	return p.oxr.setupLoader() &&
+	       p.oxr.findExtensions() &&
+	       p.oxr.createInstanceEGL() &&
 	       p.oxr.createSessionEGL(ref p.egl) &&
-	       createActions(p) &&
-	       p.oxr.createViews() &&
-	       p.oxr.startSession();
+	       p.oxr.createViewsGL() &&
+	       p.oxr.startSession() &&
+	       createActions(p);
 }
 
 fn finiOpenXR(p: Program)
@@ -105,28 +106,33 @@ fn finiOpenXR(p: Program)
 	}
 }
 
-fn setupLoader(p: Program) bool
+fn setupLoader(ref oxr: oxr.OpenXR) bool
 {
-	p.oxr.lib = loadLoader();
-	if (p.oxr.lib is null) {
-		p.log("Failed to load OpenXR runtime!");
+	oxr.lib = loadLoader();
+	if (oxr.lib is null) {
+		oxr.log("Failed to load OpenXR runtime!");
 		return false;
 	}
 
-	if (!loadRuntimeFuncs(p.oxr.lib.symbol)) {
-		p.log("Failed to load OpenXR runtime functions!");
+	if (!loadRuntimeFuncs(oxr.lib.symbol)) {
+		oxr.log("Failed to load OpenXR runtime functions!");
 		return false;
 	}
 
 	return true;
 }
 
-fn createInstance(ref oxr: oxr.OpenXR) bool
+fn findExtensions(ref oxr: oxr.OpenXR) bool
 {
-	XrResult ret;
-
 	extProps: XrExtensionProperties[];
-	enumExtensionProps(ref oxr, out extProps);
+	ret: XrResult;
+
+	ret = enumExtensionProps(ref oxr, out extProps);
+	if (ret != XR_SUCCESS) {
+		// Already logged.
+		return false;
+	}
+
 	foreach (ref ext; extProps) {
 		name := watt.toString(ext.extensionName.ptr);
 		switch (name) {
@@ -139,6 +145,13 @@ fn createInstance(ref oxr: oxr.OpenXR) bool
 		default:
 		}
 	}
+
+	return true;
+}
+
+fn createInstanceEGL(ref oxr: oxr.OpenXR) bool
+{
+	ret: XrResult;
 
 	if (!oxr.XR_MND_egl_enable) {
 		oxr.log("Doesn't have XR_MND_egl_enable! :(");
@@ -174,7 +187,7 @@ fn createInstance(ref oxr: oxr.OpenXR) bool
 
 fn createSessionEGL(ref oxr: oxr.OpenXR, ref egl: egl.EGL) bool
 {
-	XrResult ret;
+	ret: XrResult;
 
 	getInfo: XrSystemGetInfo;
 	getInfo.type = XR_TYPE_SYSTEM_GET_INFO;
@@ -227,9 +240,9 @@ fn createSessionEGL(ref oxr: oxr.OpenXR, ref egl: egl.EGL) bool
 	return true;
 }
 
-fn createViews(ref oxr: oxr.OpenXR) bool
+fn createViewsGL(ref oxr: oxr.OpenXR) bool
 {
-	XrResult ret;
+	ret: XrResult;
 
 	oxr.viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
 	ret = xrGetViewConfigurationProperties(oxr.instance, oxr.systemId, oxr.viewConfigType, &oxr.viewConfigProperties);
