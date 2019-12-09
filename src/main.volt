@@ -18,6 +18,7 @@ import amp.egl;
 import amp.openxr;
 import amp.openxr.loader;
 
+import charge.core.egl;
 import charge.core.openxr;
 import core = charge.core;
 import gfx = charge.gfx;
@@ -26,7 +27,6 @@ import ground.program;
 import ground.game;
 import ground.actions;
 import ground.openxr;
-import ground.egl;
 import ground.gfx;
 
 
@@ -46,10 +46,10 @@ fn runOpenXR(args: string[]) i32
 
 	scope (exit) {
 		finiOpenXR(p);
-		finiEGL(p);
+		finiEGL(ref p.egl);
 	}
 
-	if (!initEGL(p) || !initOpenXR(p)) {
+	if (!initEGL(ref p.egl) || !initOpenXR(p)) {
 		return 1;
 	}
 

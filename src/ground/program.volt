@@ -18,6 +18,8 @@ import ground.actions;
 import math = charge.math;
 import gfx = charge.gfx;
 
+import charge.core.egl;
+
 
 /*!
  * Main program struct holding everything together.
@@ -45,6 +47,7 @@ public:
 public:
 	this()
 	{
+		egl.log = log;
 		oxr.log = log;
 		oxr.updateActions = updateActions;
 	}
@@ -59,17 +62,6 @@ public:
 	{
 		return .updateActions(this, predictedDisplayTime);
 	}
-}
-
-/*!
- * Holds all needed EGL state.
- */
-struct EGL
-{
-	lib: watt.Library;
-	dpy: EGLDisplay;
-	cfg: EGLConfig;
-	ctx: EGLContext;
 }
 
 /*!
