@@ -12,13 +12,14 @@ import amp.openxr;
 import ground.program;
 
 
-fn enumExtensionProps(out outExtProps: XrExtensionProperties[]) XrResult
+fn enumExtensionProps(ref oxr: OpenXR, out outExtProps: XrExtensionProperties[]) XrResult
 {
 	XrResult ret;
 	num: u32;
 
 	ret = xrEnumerateInstanceExtensionProperties(null, 0, &num, null);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateInstanceExtensionProperties failed (call 1)!");
 		return ret;
 	}
 
@@ -29,6 +30,7 @@ fn enumExtensionProps(out outExtProps: XrExtensionProperties[]) XrResult
 
 	ret = xrEnumerateInstanceExtensionProperties(null, num, &num, extProps.ptr);
 	if (ret != XR_SUCCESS) {
+		oxr.log("xrEnumerateInstanceExtensionProperties failed (call 2)!");
 		return ret;
 	}
 

@@ -124,7 +124,7 @@ fn createInstance(ref oxr: OpenXR) bool
 	XrResult ret;
 
 	extProps: XrExtensionProperties[];
-	enumExtensionProps(out extProps);
+	enumExtensionProps(ref oxr, out extProps);
 	foreach (ref ext; extProps) {
 		name := watt.toString(ext.extensionName.ptr);
 		switch (name) {
