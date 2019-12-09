@@ -18,10 +18,12 @@ import amp.egl;
 import amp.openxr;
 import amp.openxr.loader;
 
-import charge.core.egl;
-import charge.core.openxr;
 import core = charge.core;
+import egl = charge.core.egl;
+import oxr = charge.core.openxr;
 import gfx = charge.gfx;
+
+import charge.core.openxr.core;
 
 import ground.program;
 import ground.game;
@@ -46,10 +48,10 @@ fn runOpenXR(args: string[]) i32
 
 	scope (exit) {
 		finiOpenXR(p);
-		finiEGL(ref p.egl);
+		egl.finiEGL(ref p.egl);
 	}
 
-	if (!initEGL(ref p.egl) || !initOpenXR(p)) {
+	if (!egl.initEGL(ref p.egl) || !initOpenXR(p)) {
 		return 1;
 	}
 
@@ -89,7 +91,7 @@ fn initOpenXR(p: Program) bool
 {
 	return setupLoader(p) &&
 	       p.oxr.createInstance() &&
-	       p.oxr.createSession(ref p.egl) &&
+	       p.oxr.createSessionEGL(ref p.egl) &&
 	       createActions(p) &&
 	       p.oxr.createViews() &&
 	       p.oxr.startSession();
@@ -119,7 +121,7 @@ fn setupLoader(p: Program) bool
 	return true;
 }
 
-fn createInstance(ref oxr: OpenXR) bool
+fn createInstance(ref oxr: oxr.OpenXR) bool
 {
 	XrResult ret;
 
@@ -170,7 +172,7 @@ fn createInstance(ref oxr: OpenXR) bool
 	return true;
 }
 
-fn createSession(ref oxr: OpenXR, ref egl: EGL) bool
+fn createSessionEGL(ref oxr: oxr.OpenXR, ref egl: egl.EGL) bool
 {
 	XrResult ret;
 
@@ -225,7 +227,7 @@ fn createSession(ref oxr: OpenXR, ref egl: EGL) bool
 	return true;
 }
 
-fn createViews(ref oxr: OpenXR) bool
+fn createViews(ref oxr: oxr.OpenXR) bool
 {
 	XrResult ret;
 
@@ -242,7 +244,7 @@ fn createViews(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	oxr.views = new View[](oxr.viewConfigs.length);
+	oxr.views = new .oxr.View[](oxr.viewConfigs.length);
 
 	foreach(i, ref viewConfig; oxr.viewConfigs) {
 		view := &oxr.views[i];
@@ -296,7 +298,7 @@ fn createViews(ref oxr: OpenXR) bool
 	return true;
 }
 
-fn startSession(ref oxr: OpenXR) bool
+fn startSession(ref oxr: oxr.OpenXR) bool
 {
 	ret: XrResult;
 

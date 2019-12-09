@@ -8,6 +8,7 @@ module ground.openxr.enumerate;
 
 import lib.gl.gl33 : GLuint;
 import amp.openxr;
+import charge.core.openxr;
 
 import ground.program;
 

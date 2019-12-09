@@ -4,7 +4,7 @@
  * @brief  Core using EGL and OpenXR to show content.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module charge.core.openxr;
+module charge.core.openxr.core;
 
 import core.exception;
 import core.c.stdio : fprintf, fflush, stderr;
@@ -16,6 +16,7 @@ import io = watt.io;
 
 import charge.core;
 import charge.core.basic;
+import charge.core.openxr;
 import charge.sys.resource;
 import charge.sys.memheader;
 
@@ -27,10 +28,17 @@ private:
 
 
 public:
-	this()
+	this(mode: Mode = Mode.Normal)
 	{
 		gInstance = this;
 		super(Flag.GFX);
+
+		final switch (mode) {
+		case Mode.Normal:
+			break;
+		case Mode.Headless:
+			break;
+		}
 
 		setRender(null);
 		setLogic(null);

@@ -17,8 +17,8 @@ import ground.actions;
 
 import math = charge.math;
 import gfx = charge.gfx;
-
-import charge.core.egl;
+import egl = charge.core.egl;
+import oxr = charge.core.openxr;
 
 
 /*!
@@ -27,8 +27,8 @@ import charge.core.egl;
 class Program
 {
 public:
-	oxr: OpenXR;
-	egl: EGL;
+	egl: .egl.EGL;
+	oxr: .oxr.OpenXR;
 
 	iProfKhrSimple: XrPath;
 	iProfGoogleDaydream: XrPath;
@@ -62,51 +62,4 @@ public:
 	{
 		return .updateActions(this, predictedDisplayTime);
 	}
-}
-
-/*!
- * Holds the basic OpenXR state needed.
- */
-struct OpenXR
-{
-	lib: watt.Library;
-
-	instance: XrInstance;
-	systemId: XrSystemId;
-	session: XrSession;
-
-	//! Is this available
-	XR_MND_headless: bool;
-	//! Is this available
-	XR_MND_egl_enable: bool;
-
-	//! Selected blend mode.
-	blendMode: XrEnvironmentBlendMode;
-	//! Selected view config.
-	viewConfigType: XrViewConfigurationType;
-	//! Configuration props for selected view config.
-	viewConfigProperties: XrViewConfigurationProperties;
-	//! Config for each view.
-	viewConfigs: XrViewConfigurationView[];
-
-	space: XrSpace;
-
-	views: View[];
-
-	updateActions: dg(XrTime) bool;
-	log: dg(string);
-}
-
-struct View
-{
-	width, height: uint;
-
-	swapchain: XrSwapchain;
-
-	location: XrView;
-
-	current_index: u32;
-	textures: GLuint[];
-	depth: GLuint;
-	targets: gfx.Target[];
 }

@@ -11,17 +11,18 @@ import amp.openxr;
 
 import gfx = charge.gfx;
 import math = charge.math;
+import oxr = charge.core.openxr;
 
 import ground.program;
 import ground.gfx.scene;
 
 
-fn loop(ref oxr: OpenXR, scene: Scene)
+fn loop(ref oxr: oxr.OpenXR, scene: Scene)
 {
 	while (oxr.oneLoop(scene));
 }
 
-fn oneLoop(ref oxr: OpenXR, scene: Scene) bool
+fn oneLoop(ref oxr: oxr.OpenXR, scene: Scene) bool
 {
 	defTarget := gfx.DefaultTarget.opCall();
 	ret: XrResult;
@@ -111,7 +112,7 @@ fn oneLoop(ref oxr: OpenXR, scene: Scene) bool
 	return true;
 }
 
-fn waitFrame(ref oxr: OpenXR, out predictedDisplayTime: XrTime) XrResult
+fn waitFrame(ref oxr: oxr.OpenXR, out predictedDisplayTime: XrTime) XrResult
 {
 	ret: XrResult;
 
@@ -129,7 +130,7 @@ fn waitFrame(ref oxr: OpenXR, out predictedDisplayTime: XrTime) XrResult
 	return XR_SUCCESS;
 }
 
-fn acquireAndWaitViewImage(ref oxr: OpenXR, ref view: View) XrResult
+fn acquireAndWaitViewImage(ref oxr: oxr.OpenXR, ref view: oxr.View) XrResult
 {
 	ret: XrResult;
 
@@ -153,7 +154,7 @@ fn acquireAndWaitViewImage(ref oxr: OpenXR, ref view: View) XrResult
 	return XR_SUCCESS;
 }
 
-fn getViewLocation(ref oxr: OpenXR, predictedDisplayTime: XrTime) XrResult
+fn getViewLocation(ref oxr: oxr.OpenXR, predictedDisplayTime: XrTime) XrResult
 {
 	ret: XrResult;
 	views: XrView[32];
