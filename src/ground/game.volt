@@ -14,8 +14,14 @@ import ctl = charge.ctl;
 import math = charge.math;
 import scene = charge.game.scene;
 
-import ground.gfx;
+import charge.core.openxr.core : CoreOpenXR;
 
+import ground.gfx;
+import ground.actions;
+
+
+global gMoveActions: MoveActions;
+global gGameplayActions: GameplayActions;
 
 /*!
  * Very small wrapper class to show the scene without OpenXR.
@@ -23,20 +29,21 @@ import ground.gfx;
 class WindowGame : scene.ManagerApp
 {
 public:
-	this(args: string[], core: core.Core = null)
+	this(args: string[])
 	{
-		if (core is null) {
-			// First init core.
-			opts := new .core.Options();
-			opts.width = 1920;
-			opts.height = 1080;
-			super(opts);
-		} else {
-			super(core);
-		}
+		// First init core.
+		opts := new .core.Options();
+		opts.width = 1920;
+		opts.height = 1080;
+
+		core := new CoreOpenXR(opts);
+
+		super(core);
 
 		s := new WrapperScene(this);
 		push(s);
+
+		createActions(ref gMoveActions, ref gGameplayActions);
 	}
 }
 
@@ -67,7 +74,7 @@ public:
 		super(app, Type.Game);
 		s = new Scene();
 
-		aa.kind = gfx.AA.Kind.MSAA4;
+		aa.kind = gfx.AA.Kind.None;
 		camRotation = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 		camPosition = math.Point3f.opCall(0.0f, 1.6f, 0.0f);
 	}
@@ -89,6 +96,13 @@ public:
 		aa.close();
 		s.close();
 		s = null;
+	}
+
+	override fn updateActions(predictedDisplayTime: i64)
+	{
+		if (!.updateActions(ref gMoveActions, ref gGameplayActions, predictedDisplayTime)) {
+			core.get().quit(0);
+		}
 	}
 
 	override fn logic()

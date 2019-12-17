@@ -202,6 +202,7 @@ public:
 
 		gfx.glCheckError();
 		glFlush();
+		gfx.glCheckError();
 	}
 
 	fn drawSquare(ref vp: math.Matrix4x4d)

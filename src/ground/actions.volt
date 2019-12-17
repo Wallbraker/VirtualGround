@@ -11,7 +11,6 @@ import math = charge.math;
 
 import charge.core.openxr : gOpenXR;
 
-import ground.program;
 import ground.gfx.scene;
 
 
@@ -70,6 +69,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 		return false;
 	}
 	if (boolValue.currentState) {
+		gOpenXR.log("Quit!");
 		return false;
 	}
 
