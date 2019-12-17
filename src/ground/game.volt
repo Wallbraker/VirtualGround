@@ -23,13 +23,17 @@ import ground.gfx;
 class WindowGame : scene.ManagerApp
 {
 public:
-	this(args: string[])
+	this(args: string[], core: core.Core = null)
 	{
-		// First init core.
-		opts := new core.Options();
-		opts.width = 1920;
-		opts.height = 1080;
-		super(opts);
+		if (core is null) {
+			// First init core.
+			opts := new .core.Options();
+			opts.width = 1920;
+			opts.height = 1080;
+			super(opts);
+		} else {
+			super(core);
+		}
 
 		s := new WrapperScene(this);
 		push(s);

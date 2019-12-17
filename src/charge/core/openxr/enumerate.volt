@@ -4,13 +4,11 @@
  * @brief  Holds enumartion related functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module ground.openxr.enumerate;
+module charge.core.openxr.enumerate;
 
 import lib.gl.gl33 : GLuint;
 import amp.openxr;
 import charge.core.openxr;
-
-import ground.program;
 
 
 fn enumExtensionProps(ref oxr: OpenXR, out outExtProps: XrExtensionProperties[]) XrResult

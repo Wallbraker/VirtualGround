@@ -17,8 +17,9 @@ import ground.actions;
 
 import math = charge.math;
 import gfx = charge.gfx;
-import egl = charge.core.egl;
 import oxr = charge.core.openxr;
+
+import charge.core.openxr.core;
 
 
 /*!
@@ -27,18 +28,7 @@ import oxr = charge.core.openxr;
 class Program
 {
 public:
-	egl: .egl.EGL;
-	oxr: .oxr.OpenXR;
-
-	iProfKhrSimple: XrPath;
-	iProfGoogleDaydream: XrPath;
-	iProfMndBallOnStick: XrPath;
-
-	subPathUser: XrPath;
-	subPathHead: XrPath;
-	subPathLeft: XrPath;
-	subPathRight: XrPath;
-	subPathGamePad: XrPath;
+	core: CoreOpenXR;
 
 	move: MoveActions;
 	gameplay: GameplayActions;
@@ -47,19 +37,11 @@ public:
 public:
 	this()
 	{
-		egl.log = log;
-		oxr.log = log;
-		oxr.updateActions = updateActions;
-	}
-
-	fn log(str: string)
-	{
-		io.output.writefln("%s", str);
-		io.output.flush();
+		oxr.gOpenXR.updateActions = updateActions;
 	}
 
 	fn updateActions(predictedDisplayTime: XrTime) bool
 	{
-		return .updateActions(this, predictedDisplayTime);
+		return .updateActions(ref this.move, ref this.gameplay, predictedDisplayTime);
 	}
 }

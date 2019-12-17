@@ -19,10 +19,10 @@ import ground.gfx.scene;
 
 fn loop(ref oxr: oxr.OpenXR, scene: Scene)
 {
-	while (oxr.oneLoop(scene));
+	while (oxr.oneLoop(scene.renderView));
 }
 
-fn oneLoop(ref oxr: oxr.OpenXR, scene: Scene) bool
+fn oneLoop(ref oxr: oxr.OpenXR, render: dg(t: gfx.Target, ref viewInfo: gfx.ViewInfo)) bool
 {
 	defTarget := gfx.DefaultTarget.opCall();
 	ret: XrResult;
@@ -77,7 +77,7 @@ fn oneLoop(ref oxr: oxr.OpenXR, scene: Scene) bool
 		target.bind(defTarget);
 
 		// This is where we render!
-		scene.renderView(target, ref viewInfo);
+		render(target, ref viewInfo);
 
 		xrReleaseSwapchainImage(view.swapchain, &releaseInfo);
 		view.current_index = 0xffff_ffff_u32;
