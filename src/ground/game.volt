@@ -14,6 +14,7 @@ import ctl = charge.ctl;
 import math = charge.math;
 import scene = charge.game.scene;
 
+import charge.core.openxr : Mode;
 import charge.core.openxr.core : CoreOpenXR;
 
 import ground.gfx;
@@ -36,11 +37,12 @@ public:
 		opts.width = 1920;
 		opts.height = 1080;
 
-		core := new CoreOpenXR(opts);
+		mode := args.length >= 2 ? Mode.Headless : Mode.Normal;
+		core := new CoreOpenXR(opts, mode);
 
 		super(core);
 
-		s := new WrapperScene(this);
+		s := new WrapperScene(this, mode);
 		push(s);
 
 		createActions(ref gMoveActions, ref gGameplayActions);
@@ -64,26 +66,35 @@ public:
 
 
 protected:
+	mMode: Mode;
 	mCamHeading, mCamPitch, distance: f32;
 	mCamUp, mCamFore, mCamBack, mCamLeft, mCamRight: bool;
 
 
 public:
-	this(app: scene.ManagerApp)
+	this(app: scene.ManagerApp, mode: Mode)
 	{
 		super(app, Type.Game);
-		s = new Scene();
+		this.s = new Scene();
 
-		aa.kind = gfx.AA.Kind.None;
+		this.mMode = mode;
+		if (mMode == Mode.Headless) {
+			aa.kind = gfx.AA.Kind.None;
+		} else {
+			aa.kind = gfx.AA.Kind.MSAA4;
+		}
+
 		camRotation = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 		camPosition = math.Point3f.opCall(0.0f, 1.6f, 0.0f);
 	}
 
 	override fn render(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
-		viewInfo.ensureValidFov(85, t);
-		viewInfo.position = camPosition;
-		viewInfo.rotation = camRotation;
+		if (mMode == Mode.Headless) {
+			viewInfo.ensureValidFov(85, t);
+			viewInfo.position = camPosition;
+			viewInfo.rotation = camRotation;
+		}
 
 		// Always use the AA, it supports non-aa.
 		aa.bind(t);

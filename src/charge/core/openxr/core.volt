@@ -27,6 +27,8 @@ import math = charge.math;
 
 import charge.core;
 import charge.core.basic;
+import charge.core.sdl;
+import charge.core.win32;
 import charge.core.openxr;
 import charge.core.openxr.enumerate;
 import charge.sys.resource;
@@ -39,21 +41,21 @@ class CoreOpenXR : BasicCore
 {
 public:
 	egl: .egl.EGL;
-	input: ctl.Input;
 
 
 private:
-	m_running: bool;
+	mRunning: bool;
+	mChain: Core;
 
 
 public:
-	this(opts: Options = null, mode: Mode = Mode.Normal)
+	this(opts: Options, mode: Mode)
 	{
-		// Need to do this ASAP.
-		this.egl.log = log;
-		gOpenXR.log = log;
+		assert(opts !is null);
 
-		this.input = new InputOpenXR();
+		// Need to do this ASAP.
+		this.egl.log = doLog;
+		gOpenXR.log = doLog;
 
 		gInstance = this;
 		super(Flag.GFX);
@@ -62,59 +64,106 @@ public:
 		case Mode.Normal:
 			// First start with EGL.
 			.egl.initEGL(ref this.egl);
+
+			new InputOpenXR();
+
+			initOpenXRWithEGL(ref gOpenXR, ref this.egl);
+
+			foreach (initFunc; gInitFuncs) {
+				initFunc();
+			}
+
+			mRunning = true;
+
 			break;
 		case Mode.Headless:
+			initOpenXRHeadless(ref gOpenXR);
+
+			version (Windows) {
+				mChain = new CoreWin32(opts);
+			} else {
+				mChain = new CoreSDL(opts);
+			}
+
+			mChain.setUpdateActions(chainUpdateActions);
+			mChain.setLogic(chainLogic);
+			mChain.setRender(chainRender);
+			mChain.setClose(chainClose);
+			mChain.setIdle(chainIdle);
+
 			break;
 		}
-
-		initOpenXR(ref gOpenXR, ref this.egl);
-
-		foreach (initFunc; gInitFuncs) {
-			initFunc();
-		}
-
-		m_running = true;
 	}
 
 	override fn loop() int
 	{
-		while (m_running && oneLoop(ref gOpenXR, render, updateActions));
+		if (mChain !is null) {
+			return mChain.loop();
+		} else {
+			while (mRunning) {
+				oneLoop(ref gOpenXR, doRender, doUpdateActions);
+			}
 
-		doClose();
-		return mRetVal;
+			doClose();
+
+			return mRetVal;
+		}
 	}
 
 	override fn quit(ret: int)
 	{
-		mRetVal = ret;
-		m_running = false;
+		if (mChain !is null) {
+			mChain.quit(ret);
+		} else {
+			mRetVal = ret;
+			mRunning = false;
+		}
 	}
 
 	override fn panic(msg: string)
 	{
-		io.error.writefln("panic");
-		io.error.writefln("%s", msg);
-		io.error.flush();
-		exit(-1);
+		if (mChain !is null) {
+			return mChain.panic(msg);
+		} else {
+			io.error.writefln("panic");
+			io.error.writefln("%s", msg);
+			io.error.flush();
+			exit(-1);
+		}
 	}
 
 	override fn getClipboardText() string
 	{
-		return null;
+		if (mChain !is null) {
+			return mChain.getClipboardText();
+		} else {
+			return null;
+		}
 	}
 
 	override fn screenShot()
 	{
+		if (mChain !is null) {
+			return mChain.screenShot();
+		}
 	}
 
 	override fn resize(w: uint, h: uint, mode: WindowMode)
 	{
+		if (mChain !is null) {
+			return mChain.resize(w, h, mode);
+		}
 	}
 
 	override fn size(out w: uint, out h: uint, out mode: WindowMode)
 	{
+		if (mChain !is null) {
+			return mChain.size(out w, out h, out mode);
+		}
 	}
 
+
+private:
 	fn doClose()
 	{
 		closeDg();
@@ -132,21 +181,41 @@ public:
 		io.output.flush();
 	}
 
-	fn updateActions(predictedDisplayTime: XrTime)
+	fn doUpdateActions(predictedDisplayTime: XrTime)
 	{
 		updateActionsDg(predictedDisplayTime);
 	}
 
-	fn render(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
+	fn doRender(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
 		renderDg(t, ref viewInfo);
 	}
 
-	fn log(str: string)
+	fn doLog(str: string)
 	{
 		io.output.writefln("%s", str);
 		io.output.flush();
 	}
+
+
+	/*
+	 *
+	 * Chain functions.
+	 *
+	 */
+
+	fn chainUpdateActions(predictedDisplayTime: i64) { updateActionsDg(predictedDisplayTime); }
+	fn chainLogic() { logicDg(); }
+
+	fn chainRender(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
+	{
+		updateActionsDg(0);
+
+		renderDg(t, ref viewInfo);
+	}
+
+	fn chainClose() { doClose(); }
+	fn chainIdle(time: i64) { idleDg(time); }
 }
 
 class InputOpenXR : ctl.Input
@@ -190,13 +259,22 @@ class KeyboardOpenXR : ctl.Keyboard
  *
  */
 
-fn initOpenXR(ref oxr: OpenXR, ref egl: egl.EGL) bool
+fn initOpenXRWithEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 {
 	return oxr.setupLoader() &&
 	       oxr.findExtensions() &&
 	       oxr.createInstanceEGL() &&
 	       oxr.createSessionEGL(ref egl) &&
 	       oxr.createViewsGL() &&
+	       oxr.startSession();
+}
+
+fn initOpenXRHeadless(ref oxr: OpenXR) bool
+{
+	return oxr.setupLoader() &&
+	       oxr.findExtensions() &&
+	       oxr.createInstanceHeadless() &&
+	       oxr.createSessionHeadless() &&
 	       oxr.startSession();
 }
 
@@ -255,6 +333,89 @@ fn findExtensions(ref oxr: OpenXR) bool
 			break;
 		default:
 		}
+	}
+
+	return true;
+}
+
+fn createInstanceHeadless(ref oxr: OpenXR) bool
+{
+	ret: XrResult;
+
+	if (!oxr.XR_MND_headless) {
+		oxr.log("Doesn't have XR_MND_headless! :(");
+		return false;
+	}
+
+	exts: const(char)*[2] = [
+		"XR_KHR_convert_timespec_time".ptr,
+		"XR_MND_headless".ptr,
+	];
+
+	createInfo: XrInstanceCreateInfo;
+	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.enabledExtensionCount = cast(u32)exts.length;
+	createInfo.enabledExtensionNames = exts.ptr;
+	createInfo.applicationInfo.applicationName[] = "CoreOpenXR";
+	createInfo.applicationInfo.applicationVersion = 1;
+	createInfo.applicationInfo.engineName[] = "Charge";
+	createInfo.applicationInfo.engineVersion = 1;
+	createInfo.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 3);
+
+	ret = xrCreateInstance(&createInfo, &oxr.instance);
+	if (ret != XR_SUCCESS) {
+		oxr.log("Failed to create instance");
+		return false;
+	}
+
+	// Also load functions for this instance.
+	loadInstanceFunctions(oxr.instance);
+
+	return true;
+}
+
+fn createSessionHeadless(ref oxr: OpenXR) bool
+{
+	ret: XrResult;
+
+	getInfo: XrSystemGetInfo;
+	getInfo.type = XR_TYPE_SYSTEM_GET_INFO;
+	getInfo.formFactor = XrFormFactor.XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+
+	ret = xrGetSystem(oxr.instance, &getInfo, &oxr.systemId);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrGetSystem failed!");
+		return false;
+	}
+
+	// Hard coded for now.
+	oxr.viewConfigType = XrViewConfigurationType.XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+
+	envBlendModes: XrEnvironmentBlendMode[];
+	ret = enumEnvironmentBlendModes(ref oxr, oxr.viewConfigType, out envBlendModes);
+	if (ret != XR_SUCCESS || envBlendModes.length <= 0) {
+		return false;
+	}
+	oxr.blendMode = envBlendModes[0];
+
+	createInfo: XrSessionCreateInfo;
+	createInfo.type = XR_TYPE_SESSION_CREATE_INFO;
+	createInfo.systemId = oxr.systemId;
+	ret = xrCreateSession(oxr.instance, &createInfo, &oxr.session);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrCreateSession failed!");
+		return false;
+	}
+
+	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
+	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
+	referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+
+	ret = xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &oxr.space);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrCreateReferenceSpace failed!");
+		return false;
 	}
 
 	return true;
