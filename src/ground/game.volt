@@ -57,18 +57,26 @@ class WrapperScene : scene.Simple
 public:
 	s: Scene;
 
-	// Rotation stuff.
-	isDragging: bool;
-	camPosition: math.Point3f;
-	camRotation: math.Quatf;
-	camSpeed: f32 = 0.2f;
-	aa: gfx.AA;
+	enum CamSpeed: f32[3] = [
+		0.002f,
+		0.01f,
+		0.03f,
+	];
 
 
 protected:
+	// XR Mode.
 	mMode: Mode;
-	mCamHeading, mCamPitch, distance: f32;
-	mCamUp, mCamFore, mCamBack, mCamLeft, mCamRight: bool;
+
+	// AA, only used for headless.
+	mAA: gfx.AA;
+
+	// Rotation stuff.
+	mIsDragging: bool;
+	camPosition: math.Point3f;
+	camRotation: math.Quatf;
+	mCamHeading, mCamPitch, mDistance: f32;
+	mCamUp, mCamFore, mCamBack, mCamLeft, mCamRight, mCamSlow, mCamFast: bool;
 
 
 public:
@@ -79,9 +87,9 @@ public:
 
 		this.mMode = mode;
 		if (mMode == Mode.Headless) {
-			aa.kind = gfx.AA.Kind.None;
+			mAA.kind = gfx.AA.Kind.MSAA4;
 		} else {
-			aa.kind = gfx.AA.Kind.MSAA4;
+			mAA.kind = gfx.AA.Kind.None;
 		}
 
 		camRotation = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
@@ -97,14 +105,14 @@ public:
 		}
 
 		// Always use the AA, it supports non-aa.
-		aa.bind(t);
-		s.renderView(aa.fbo, ref viewInfo);
-		aa.resolveToAndBind(t);
+		mAA.bind(t);
+		s.renderView(mAA.fbo, ref viewInfo);
+		mAA.resolveToAndBind(t);
 	}
 
 	override fn close()
 	{
-		aa.close();
+		mAA.close();
 		s.close();
 		s = null;
 	}
@@ -137,9 +145,12 @@ public:
 			sum.y += 1;
 		}
 
+		speedIndex := mCamFast - mCamSlow + 1;
+		speed := CamSpeed[speedIndex];
+
 		if (sum.lengthSqrd() != 0.f) {
 			sum.normalize();
-			sum.scale(camSpeed);
+			sum.scale(speed);
 			camPosition += sum;
 		}
 	}
@@ -153,7 +164,9 @@ public:
 		case 's': mCamBack = true; break;
 		case 'a': mCamLeft = true; break;
 		case 'd': mCamRight = true; break;
-		case 'o': aa.toggle(); break;
+		case 'o': mAA.toggle(); break;
+		case (224 | 1 << 30), (228 | 1 << 30): mCamSlow = true; break;
+		case (225 | 1 << 30), (229 | 1 << 30): mCamFast = true; break;
 		default:
 		}
 	}
@@ -166,13 +179,15 @@ public:
 		case 's': mCamBack = false; break;
 		case 'a': mCamLeft = false; break;
 		case 'd': mCamRight = false; break;
+		case (224 | 1 << 30), (228 | 1 << 30): mCamSlow = false; break;
+		case (225 | 1 << 30), (229 | 1 << 30): mCamFast = false; break;
 		default:
 		}
 	}
 
 	override fn mouseMove(m: ctl.Mouse, x: int, y: int)
 	{
-		if (isDragging) {
+		if (mIsDragging) {
 			mCamHeading += x * -0.003f;
 			mCamPitch += y * -0.003f;
 		}
@@ -186,16 +201,16 @@ public:
 		switch (button) {
 		case 1:
 			m.setRelativeMode(true);
-			isDragging = true;
+			mIsDragging = true;
 			break;
 		case 4: // Mouse wheel up.
-			distance -= 0.1f;
-			if (distance < 0.0f) {
-				distance = 0.0f;
+			mDistance -= 0.1f;
+			if (mDistance < 0.0f) {
+				mDistance = 0.0f;
 			}
 			break;
 		case 5: // Mouse wheel down.
-			distance += 0.1f;
+			mDistance += 0.1f;
 			break;
 		default:
 		}
@@ -204,7 +219,7 @@ public:
 	override fn mouseUp(m: ctl.Mouse, button: int)
 	{
 		if (button == 1) {
-			isDragging = false;
+			mIsDragging = false;
 			m.setRelativeMode(false);
 		}
 	}
