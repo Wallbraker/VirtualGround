@@ -6,11 +6,11 @@
  */
 module main;
 
-import ground.game;
+static import ground.game;
 
 
 fn main(args: string[]) i32
 {
-	g := new WindowGame(args);
+	g := new ground.game.Game(args);
 	return g.loop();
 }

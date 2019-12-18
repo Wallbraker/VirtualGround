@@ -27,7 +27,7 @@ global gGameplayActions: GameplayActions;
 /*!
  * Very small wrapper class to show the scene without OpenXR.
  */
-class WindowGame : scene.ManagerApp
+class Game : scene.ManagerApp
 {
 public:
 	this(args: string[])
@@ -42,7 +42,7 @@ public:
 
 		super(core);
 
-		s := new WrapperScene(this, mode);
+		s := new MainScene(this, mode);
 		push(s);
 
 		createActions(ref gMoveActions, ref gGameplayActions);
@@ -52,7 +52,7 @@ public:
 /*!
  * Very small wrapper class to show the scene without OpenXR.
  */
-class WrapperScene : scene.Simple
+class MainScene : scene.Simple
 {
 public:
 	s: Scene;
