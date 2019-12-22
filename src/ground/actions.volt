@@ -144,9 +144,9 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	if (gOpenXR.views.length == 0) {
 		ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
 		if (ret == XR_SUCCESS) {
-			gPsMvComplete[0].active = true;
-			gPsMvComplete[0].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
-			gPsMvComplete[0].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+			gAxis[0].active = true;
+			gAxis[0].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+			gAxis[0].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
 		}
 	}
 

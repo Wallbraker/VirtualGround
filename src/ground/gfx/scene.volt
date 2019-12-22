@@ -24,6 +24,49 @@ global gGroundObj: VoxelObject;
 global gPsMvBall: VoxelObject[2];
 global gPsMvComplete: VoxelObject[2];
 global gPsMvControllerOnly: VoxelObject[2];
+global gAxis: VoxelObject[16];
+
+fn setupAxis()
+{
+	lightRed: const(math.Color4b)   = {255, 128, 128, 255};
+	lightGreen: const(math.Color4b) = {128, 255, 128, 255};
+	lightBlue: const(math.Color4b)  = {128, 128, 255, 255};
+	darkRed: const(math.Color4b)    = {128,   0,   0, 255};
+	darkGreen: const(math.Color4b)  = {  0, 128,   0, 255};
+	darkBlue: const(math.Color4b)   = {  0,   0, 128, 255};
+
+	d := 1.0f;
+
+	vb := new VoxelBufferBuilder();
+	// No quads
+	vb.switchToLines();
+	vb.addLineVertex(0.0f, 0.0f, 0.0f, lightRed);
+	vb.addLineVertex(   d, 0.0f, 0.0f, lightRed);
+	vb.addLineVertex(0.0f, 0.0f, 0.0f, lightGreen);
+	vb.addLineVertex(0.0f,    d, 0.0f, lightGreen);
+	vb.addLineVertex(0.0f, 0.0f, 0.0f, lightBlue);
+	vb.addLineVertex(0.0f, 0.0f,    d, lightBlue);
+	vb.addLineVertex(0.0f, 0.0f, 0.0f, darkRed);
+	vb.addLineVertex(  -d, 0.0f, 0.0f, darkRed);
+	vb.addLineVertex(0.0f, 0.0f, 0.0f, darkGreen);
+	vb.addLineVertex(0.0f,   -d, 0.0f, darkGreen);
+	vb.addLineVertex(0.0f, 0.0f, 0.0f, darkBlue);
+	vb.addLineVertex(0.0f, 0.0f,   -d, darkBlue);
+
+	buf := VoxelBuffer.make("ground/voxel/axis", vb);
+	vb.close();
+
+	foreach (ref obj; gAxis) {
+		obj.active = false;
+		reference(ref obj.buf, buf);
+		obj.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+		obj.rot.normalize();
+		obj.scale = math.Vector3f.opCall(1.0f, 1.0f, 1.0f);
+		obj.origin = math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+	}
+
+	reference(ref buf, null);
+}
 
 fn setupGround()
 {
@@ -137,6 +180,7 @@ public:
 		fXW := 20.0f;
 		fZH := 20.0f;
 
+		setupAxis();
 		setupGround();
 		setupPsMvs();
 
@@ -162,6 +206,9 @@ public:
 		}
 		foreach (ref complete; gPsMvComplete) {
 			complete.close();
+		}
+		foreach (ref axis; gAxis) {
+			axis.close();
 		}
 
 		gfx.reference(ref texLogo, null);
@@ -195,6 +242,9 @@ public:
 		}
 		foreach (ref complete; gPsMvComplete) {
 			if (complete.active) { drawVoxel(ref vp, ref complete); }
+		}
+		foreach (ref axis; gAxis) {
+			if (axis.active) { drawVoxel(ref vp, ref axis); }
 		}
 
 		glBindSampler(0, 0);
@@ -238,19 +288,21 @@ public:
 		texWhite.bind();
 
 		// Draw the voxels.
-		voxelShader.bind();
-		voxelShader.matrix4("u_matrix", 1, false, ref matrix);
+		if (obj.buf.numQuadDatas > 0) {
+			voxelShader.bind();
+			voxelShader.matrix4("u_matrix", 1, false, ref matrix);
 
-		glBindVertexArray(voxelVAO);
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(1.0f, 1.0f);
+			glBindVertexArray(voxelVAO);
+			glEnable(GL_POLYGON_OFFSET_FILL);
+			glPolygonOffset(1.0f, 1.0f);
 
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, obj.buf.buf);
-		glDrawElements(GL_TRIANGLES, obj.buf.numQuadDatas * 6, GL_UNSIGNED_INT, null);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, obj.buf.buf);
+			glDrawElements(GL_TRIANGLES, obj.buf.numQuadDatas * 6, GL_UNSIGNED_INT, null);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		glBindVertexArray(0);
+			glDisable(GL_POLYGON_OFFSET_FILL);
+			glBindVertexArray(0);
+		}
 
 		// Draw the lines.
 		gfx.simpleShader.bind();
