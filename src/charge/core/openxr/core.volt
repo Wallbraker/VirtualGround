@@ -338,6 +338,22 @@ fn findExtensions(ref oxr: OpenXR) bool
 	return true;
 }
 
+fn createReferenceSpace(ref oxr: OpenXR, type: XrReferenceSpaceType, out space: XrSpace) bool
+{
+	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
+	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
+	referenceSpaceCreateInfo.referenceSpaceType = type;
+
+	ret := xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &space);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrCreateReferenceSpace failed!");
+		return false;
+	}
+
+	return true;
+}
+
 fn createInstanceHeadless(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
@@ -407,14 +423,8 @@ fn createSessionHeadless(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
-	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
-	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
-	referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-
-	ret = xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &oxr.space);
-	if (ret != XR_SUCCESS) {
-		oxr.log("xrCreateReferenceSpace failed!");
+	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_LOCAL, out oxr.localSpace) ||
+	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
 		return false;
 	}
 
@@ -498,14 +508,8 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 		return false;
 	}
 
-	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
-	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
-	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
-	referenceSpaceCreateInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
-
-	ret = xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &oxr.space);
-	if (ret != XR_SUCCESS) {
-		oxr.log("xrCreateReferenceSpace failed!");
+	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_LOCAL, out oxr.localSpace) ||
+	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
 		return false;
 	}
 
@@ -758,7 +762,7 @@ fn getViewLocation(ref oxr: OpenXR, predictedDisplayTime: XrTime) XrResult
 	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
 	viewLocateInfo.viewConfigurationType = oxr.viewConfigType;
 	viewLocateInfo.displayTime = predictedDisplayTime;
-	viewLocateInfo.space = oxr.space;
+	viewLocateInfo.space = oxr.localSpace;
 
 	viewState: XrViewState;
 	viewState.type = XR_TYPE_VIEW_STATE;

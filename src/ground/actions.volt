@@ -114,7 +114,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 
 	ret: XrResult;
 	foreach (hand; 0 .. 2) {
-		ret = xrLocateSpace(move.ballSpace[hand], gOpenXR.space, predictedDisplayTime, &spaceLocation);
+		ret = xrLocateSpace(move.ballSpace[hand], gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvBall[hand].active = false;
 			continue;
@@ -125,7 +125,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	}
 
 	foreach (hand; 0 .. 2) {
-		ret = xrLocateSpace(gameplay.gripSpace[hand], gOpenXR.space, predictedDisplayTime, &spaceLocation);
+		ret = xrLocateSpace(gameplay.gripSpace[hand], gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvComplete[hand].active = false;
 			gPsMvControllerOnly[hand].active = false;
