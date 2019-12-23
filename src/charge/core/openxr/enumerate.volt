@@ -120,3 +120,38 @@ fn enumSwapchainImages(ref oxr: OpenXR, handle: XrSwapchain, out outTextures: GL
 
 	return XR_SUCCESS;
 }
+
+
+fn enumViews(ref oxr: OpenXR, predictedDisplayTime: XrTime, ref views: XrView[32]) XrResult
+{
+	ret: XrResult;
+
+	viewLocateInfo: XrViewLocateInfo;
+	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
+	viewLocateInfo.viewConfigurationType = oxr.viewConfigType;
+	viewLocateInfo.displayTime = predictedDisplayTime;
+	viewLocateInfo.space = oxr.localSpace;
+
+	viewState: XrViewState;
+	viewState.type = XR_TYPE_VIEW_STATE;
+
+	viewCountOutput: u32;
+	ret = xrLocateViews(oxr.session, &viewLocateInfo, &viewState, 0, &viewCountOutput, null);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrLocateViews failed");
+		return ret;
+	}
+	if (views.length < viewCountOutput) {
+		oxr.log("Way too many views");
+		return XR_ERROR_VALIDATION_FAILURE;
+	}
+
+	viewCapacityInput := cast(u32)views.length;
+	ret = xrLocateViews(oxr.session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, views.ptr);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrLocateViews failed");
+		return ret;
+	}
+
+	return XR_SUCCESS;
+}
