@@ -43,6 +43,9 @@ struct OpenXR
 	//! Is this available from the current runtime.
 	XR_MND_egl_enable: bool;
 
+	//! We are not rendering to the device.
+	headless: bool;
+
 	instance: XrInstance;
 	systemId: XrSystemId;
 	session: XrSession;

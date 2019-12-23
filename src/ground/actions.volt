@@ -141,13 +141,15 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 		gPsMvControllerOnly[hand].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
 	}
 
-	if (gOpenXR.views.length == 0) {
-		ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
-		if (ret == XR_SUCCESS) {
-			gAxis[0].active = true;
-			gAxis[0].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
-			gAxis[0].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
-		}
+	if (!gOpenXR.headless) {
+		return true;
+	}
+
+	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
+	if (ret == XR_SUCCESS) {
+		gAxis[0].active = true;
+		gAxis[0].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+		gAxis[0].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
 	}
 
 	return true;

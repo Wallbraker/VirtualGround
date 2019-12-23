@@ -275,6 +275,7 @@ fn initOpenXRHeadless(ref oxr: OpenXR) bool
 	       oxr.findExtensions() &&
 	       oxr.createInstanceHeadless() &&
 	       oxr.createSessionHeadless() &&
+	       oxr.createViewsHeadless() &&
 	       oxr.startSession();
 }
 
@@ -387,11 +388,16 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
 
+	// Make that we are headless.
+	oxr.headless = true;
+
 	return true;
 }
 
 fn createSessionHeadless(ref oxr: OpenXR) bool
 {
+	assert(oxr.headless);
+
 	ret: XrResult;
 
 	getInfo: XrSystemGetInfo;
@@ -431,6 +437,30 @@ fn createSessionHeadless(ref oxr: OpenXR) bool
 	return true;
 }
 
+fn createViewsHeadless(ref oxr: OpenXR) bool
+{
+	assert(oxr.headless);
+
+	ret: XrResult;
+
+	oxr.viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
+	ret = xrGetViewConfigurationProperties(oxr.instance, oxr.systemId, oxr.viewConfigType, &oxr.viewConfigProperties);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrGetViewConfigurationProperties failed!");
+		return false;
+	}
+
+	ret = enumViewConfigurationViews(ref oxr, out oxr.viewConfigs);
+	if (ret != XR_SUCCESS) {
+		oxr.log("enumViewConfigurationViews failed!");
+		return false;
+	}
+
+	oxr.views = new .oxr.View[](oxr.viewConfigs.length);
+
+	return true;
+}
+
 fn createInstanceEGL(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
@@ -464,11 +494,16 @@ fn createInstanceEGL(ref oxr: OpenXR) bool
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
 
+	// We are not headless.
+	oxr.headless = false;
+
 	return true;
 }
 
 fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 {
+	assert(!oxr.headless);
+
 	ret: XrResult;
 
 	getInfo: XrSystemGetInfo;
@@ -518,6 +553,8 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 
 fn createViewsGL(ref oxr: OpenXR) bool
 {
+	assert(!oxr.headless);
+
 	ret: XrResult;
 
 	oxr.viewConfigProperties.type = XR_TYPE_VIEW_CONFIGURATION_PROPERTIES;
