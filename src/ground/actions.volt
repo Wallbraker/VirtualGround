@@ -10,6 +10,7 @@ import amp.openxr;
 import math = charge.math;
 
 import charge.core.openxr : gOpenXR;
+import charge.core.openxr.enumerate;
 
 import ground.gfx.scene;
 
@@ -147,9 +148,19 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 
 	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
 	if (ret == XR_SUCCESS) {
-		gAxis[0].active = true;
-		gAxis[0].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
-		gAxis[0].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+		gAxis[gOpenXR.views.length].active = true;
+		gAxis[gOpenXR.views.length].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+		gAxis[gOpenXR.views.length].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+	}
+
+	views: XrView[32];
+	ret = enumViews(ref gOpenXR, predictedDisplayTime, ref views);
+	if (ret == XR_SUCCESS) {
+		foreach (i, ref view; gOpenXR.views) {
+			gAxis[i].active = true;
+			gAxis[i].pos = *cast(math.Point3f*) &views[i].pose.position;
+			gAxis[i].rot = *cast(math.Quatf*) &views[i].pose.orientation;
+		}
 	}
 
 	return true;
