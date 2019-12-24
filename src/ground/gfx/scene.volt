@@ -110,7 +110,7 @@ fn setupPsMvs()
 {
 	ballBuf := loadModel("ground/psmv/ball", import("hardware/psmv_only_ball.vox"));
 	noBallBuf := loadModel("ground/psmv/no_ball", import("hardware/psmv_no_ball.vox"));
-	completeBuf := loadModel("ground/psmv/no_ball", import("hardware/psmv_complete.vox"));
+	completeBuf := loadModel("ground/psmv/complete", import("hardware/psmv_complete.vox"));
 
 	foreach (ref ball; gPsMvBall) {
 		reference(ref ball.buf, ballBuf);

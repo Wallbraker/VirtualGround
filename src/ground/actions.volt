@@ -114,7 +114,17 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	spaceLocation.type = XR_TYPE_SPACE_LOCATION;
 
 	ret: XrResult;
+	paths: XrPath[2];
+	xrStringToPath(gOpenXR.instance, "/user/hand/left", &paths[0]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/right", &paths[1]);
+
 	foreach (hand; 0 .. 2) {
+		// Is this hand active.
+		if (!isPoseActive(move.ballPose, paths[hand])) {
+			gPsMvBall[hand].active = false;
+			continue;
+		}
+
 		ret = xrLocateSpace(move.ballSpace[hand], gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvBall[hand].active = false;
@@ -126,6 +136,13 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	}
 
 	foreach (hand; 0 .. 2) {
+		// Is this hand active.
+		if (!isPoseActive(gameplay.gripPose, paths[hand])) {
+			gPsMvComplete[hand].active = false;
+			gPsMvControllerOnly[hand].active = false;
+			continue;
+		}
+
 		ret = xrLocateSpace(gameplay.gripSpace[hand], gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvComplete[hand].active = false;
@@ -164,6 +181,25 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	}
 
 	return true;
+}
+
+fn isPoseActive(pose: XrAction, subactionPath: XrPath) bool
+{
+	ret: XrResult;
+	getInfo: XrActionStateGetInfo;
+	getInfo.type = XrStructureType.XR_TYPE_ACTION_STATE_GET_INFO;
+	getInfo.action = pose;
+	getInfo.subactionPath = subactionPath;
+
+	poseValue: XrActionStatePose;
+	poseValue.type = XrStructureType.XR_TYPE_ACTION_STATE_POSE;
+
+	ret = xrGetActionStatePose(gOpenXR.session, &getInfo, &poseValue);
+	if (ret != XR_SUCCESS) {
+		return false;
+	}
+
+	return poseValue.isActive == XR_TRUE;
 }
 
 enum Side : size_t
