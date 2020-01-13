@@ -76,7 +76,7 @@ protected:
 	camPosition: math.Point3f;
 	camRotation: math.Quatf;
 	mCamHeading, mCamPitch, mDistance: f32;
-	mCamUp, mCamFore, mCamBack, mCamLeft, mCamRight, mCamSlow, mCamFast: bool;
+	mCamDown, mCamUp, mCamFore, mCamBack, mCamLeft, mCamRight, mCamSlow, mCamFast: bool;
 
 
 public:
@@ -144,6 +144,9 @@ public:
 		if (mCamUp) {
 			sum.y += 1;
 		}
+		if (mCamDown) {
+			sum.y -= 1;
+		}
 
 		speedIndex := mCamFast - mCamSlow + 1;
 		speed := CamSpeed[speedIndex];
@@ -159,11 +162,12 @@ public:
 	{
 		switch (keycode) {
 		case 27: mManager.closeMe(this); break;
-		case 32: mCamUp = true; break;
 		case 'w': mCamFore = true; break;
 		case 's': mCamBack = true; break;
 		case 'a': mCamLeft = true; break;
 		case 'd': mCamRight = true; break;
+		case 32, 'q': mCamUp = true; break;
+		case 'e', 'z': mCamDown = true; break;
 		case 'o': mAA.toggle(); break;
 		case (224 | 1 << 30), (228 | 1 << 30): mCamSlow = true; break;
 		case (225 | 1 << 30), (229 | 1 << 30): mCamFast = true; break;
@@ -174,11 +178,12 @@ public:
 	override fn keyUp(ctl.Keyboard, keycode: int)
 	{
 		switch (keycode) {
-		case 32: mCamUp = false; break;
 		case 'w': mCamFore = false; break;
 		case 's': mCamBack = false; break;
 		case 'a': mCamLeft = false; break;
 		case 'd': mCamRight = false; break;
+		case 32, 'q': mCamUp = false; break;
+		case 'e', 'z': mCamDown = false; break;
 		case (224 | 1 << 30), (228 | 1 << 30): mCamSlow = false; break;
 		case (225 | 1 << 30), (229 | 1 << 30): mCamFast = false; break;
 		default:
