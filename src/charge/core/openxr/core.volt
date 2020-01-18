@@ -62,12 +62,9 @@ public:
 
 		final switch (mode) {
 		case Mode.Normal:
-			// First start with EGL.
-			.egl.initEGL(ref this.egl);
-
 			new InputOpenXR();
 
-			initOpenXRWithEGL(ref gOpenXR, ref this.egl);
+			initOpenXRAndEGL(ref gOpenXR, ref this.egl);
 
 			foreach (initFunc; gInitFuncs) {
 				initFunc();
@@ -259,11 +256,12 @@ class KeyboardOpenXR : ctl.Keyboard
  *
  */
 
-fn initOpenXRWithEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
+fn initOpenXRAndEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 {
 	return oxr.setupLoader() &&
 	       oxr.findExtensions() &&
 	       oxr.createInstanceEGL() &&
+	       .egl.initEGL(ref egl) &&
 	       oxr.createSessionEGL(ref egl) &&
 	       oxr.createViewsGL() &&
 	       oxr.startSession();
