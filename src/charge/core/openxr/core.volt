@@ -64,7 +64,9 @@ public:
 		case Mode.Normal:
 			new InputOpenXR();
 
-			initOpenXRAndEGL(ref gOpenXR, ref this.egl);
+			if (!initOpenXRAndEGL(ref gOpenXR, ref this.egl)) {
+				panic("Failed to init OpenXR or EGL");
+			}
 
 			foreach (initFunc; gInitFuncs) {
 				initFunc();
@@ -74,7 +76,10 @@ public:
 
 			break;
 		case Mode.Headless:
-			initOpenXRHeadless(ref gOpenXR);
+
+			if (!initOpenXRHeadless(ref gOpenXR)) {
+				panic("Failed to init OpenXR");
+			}
 
 			version (Windows) {
 				mChain = new CoreWin32(opts);
