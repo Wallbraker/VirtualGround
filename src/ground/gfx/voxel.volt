@@ -389,10 +389,10 @@ layout (location = 1) in  vec3 in_uv;
 
 layout (location = 0) out vec4 out_color;
 
-layout (binding = 0) uniform sampler2D tex;
+layout (binding = 0) uniform sampler2DArray tex;
 
 void main(void)
 {
-	out_color = vec4(in_color * texture(tex, in_uv.xy).rgb, 1.0);
+	out_color = vec4(in_color * texture(tex, in_uv.xyz).rgb, 1.0);
 }
 `;

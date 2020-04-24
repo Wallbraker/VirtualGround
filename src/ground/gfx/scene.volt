@@ -164,6 +164,7 @@ class Scene
 public:
 	texLogo: gfx.Texture;
 	texWhite: gfx.Texture;
+	texWhiteArray: gfx.Texture;
 	mSquareBuf: gfx.SimpleBuffer;
 
 
@@ -173,7 +174,27 @@ public:
 		file := sys.File.fromImport("default.png", import("default.png"));
 		texLogo = gfx.Texture2D.load(file);
 		texWhite = gfx.Texture2D.makeRGBA8("ground/tex/white", 1, 1, 1);
-		glTextureSubImage2D(texWhite.id, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, cast(void*)&math.Color4b.White);
+		glTextureSubImage2D(texWhite.id,      // texture
+		                    0,                // level
+		                    0,                // xoffset
+		                    0,                // yoffset
+		                    1,                // width
+		                    1,                // height
+		                    GL_RGBA,          // format
+		                    GL_UNSIGNED_BYTE, // type
+		                    cast(void*)&math.Color4b.White);
+		texWhiteArray = gfx.Texture2DArray.makeRGBA8("ground/tex/white_array", 1, 1, 1, 1);
+		glTextureSubImage3D(texWhiteArray.id, // texture
+		                    0,                // level
+		                    0,                // xoffset
+		                    0,                // yoffset
+		                    0,                // zoffset
+		                    1,                // width
+		                    1,                // height
+		                    1,                // depth
+		                    GL_RGBA,          // format
+		                    GL_UNSIGNED_BYTE, // type
+		                    cast(void*)&math.Color4b.White);
 
 		fX := -20.0f;
 		fZ := -20.0f;
@@ -213,6 +234,7 @@ public:
 
 		gfx.reference(ref texLogo, null);
 		gfx.reference(ref texWhite, null);
+		gfx.reference(ref texWhiteArray, null);
 		gfx.reference(ref mSquareBuf, null);
 	}
 
@@ -285,7 +307,7 @@ public:
 		matrix.setToMultiplyAndTranspose(ref vp, ref model);
 
 		// Shared for everything.
-		texWhite.bind();
+		texWhiteArray.bind();
 
 		// Draw the voxels.
 		if (obj.buf.numQuadDatas > 0) {
@@ -304,6 +326,10 @@ public:
 			glBindVertexArray(0);
 		}
 
+		// Swap to the regular 2D texture.
+		texWhiteArray.unbind();
+		texWhite.bind();
+
 		// Draw the lines.
 		gfx.simpleShader.bind();
 		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
@@ -318,7 +344,7 @@ public:
 		glBindVertexArray(0);
 
 		// Finally remove the texture.
-		texWhite.unbind();
+		texWhite.bind();
 	}
 
 
