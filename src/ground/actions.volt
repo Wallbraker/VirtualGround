@@ -65,11 +65,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	boolValue.type = XrStructureType.XR_TYPE_ACTION_STATE_BOOLEAN;
 
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
-	if (!boolValue.isActive) {
-		gOpenXR.log("Quit action not active!");
-		return false;
-	}
-	if (boolValue.currentState) {
+	if (boolValue.isActive && boolValue.currentState) {
 		gOpenXR.log("Quit!");
 		return false;
 	}
