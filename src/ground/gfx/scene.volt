@@ -13,7 +13,11 @@ import sys = charge.sys;
 import gfx = charge.gfx;
 import math = charge.math;
 
+import io = watt.io;
+
 import watt.math;
+
+import mc = ground.gfx.mc;
 
 import ground.gfx.voxel;
 import ground.gfx.magica;
@@ -25,6 +29,7 @@ global gPsMvBall: VoxelObject[2];
 global gPsMvComplete: VoxelObject[2];
 global gPsMvControllerOnly: VoxelObject[2];
 global gAxis: VoxelObject[16];
+global gChunks: VoxelObject[16];
 
 fn setupAxis()
 {
@@ -141,6 +146,25 @@ fn setupPsMvs()
 	reference(ref completeBuf, null);
 }
 
+fn setupChunk()
+{
+	buf: VoxelBuffer;
+	mcMeshMaker: mc.VoxelMeshMaker;
+
+	vb := mcMeshMaker.makeStoneChunk();
+	buf = VoxelBuffer.make("ground/voxel/mc", vb);
+	vb.close();
+
+	chunk : VoxelObject* = &gChunks[0];
+
+	chunk.active = true;
+	chunk.buf = buf;
+	chunk.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+	chunk.rot.normalize();
+	chunk.scale = math.Vector3f.opCall(1.0f, 1.0f, 1.0f);
+	chunk.origin = math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+}
+
 struct VoxelObject
 {
 public:
@@ -183,18 +207,7 @@ public:
 		                    GL_RGBA,          // format
 		                    GL_UNSIGNED_BYTE, // type
 		                    cast(void*)&math.Color4b.White);
-		texWhiteArray = gfx.Texture2DArray.makeRGBA8("ground/tex/white_array", 1, 1, 1, 1);
-		glTextureSubImage3D(texWhiteArray.id, // texture
-		                    0,                // level
-		                    0,                // xoffset
-		                    0,                // yoffset
-		                    0,                // zoffset
-		                    1,                // width
-		                    1,                // height
-		                    1,                // depth
-		                    GL_RGBA,          // format
-		                    GL_UNSIGNED_BYTE, // type
-		                    cast(void*)&math.Color4b.White);
+		texWhiteArray = mc.makeTexture();
 
 		fX := -20.0f;
 		fZ := -20.0f;
@@ -204,6 +217,7 @@ public:
 		setupAxis();
 		setupGround();
 		setupPsMvs();
+		setupChunk();
 
 		b := new gfx.SimpleVertexBuilder(6);
 		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
@@ -230,6 +244,9 @@ public:
 		}
 		foreach (ref axis; gAxis) {
 			axis.close();
+		}
+		foreach (ref chunk; gChunks) {
+			chunk.close();
 		}
 
 		gfx.reference(ref texLogo, null);
@@ -267,6 +284,9 @@ public:
 		}
 		foreach (ref axis; gAxis) {
 			if (axis.active) { drawVoxel(ref vp, ref axis); }
+		}
+		foreach (ref chunk; gChunks) {
+			if (chunk.active) { drawVoxel(ref vp, ref chunk); }
 		}
 
 		glBindSampler(0, 0);
