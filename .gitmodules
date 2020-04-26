@@ -1,0 +1,3 @@
+[submodule "res/pp"]
+	path = res/pp
+	url = https://github.com/Wallbraker/PixelPerfection
