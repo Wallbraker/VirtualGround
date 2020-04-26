@@ -4,7 +4,9 @@
  * @brief  Chunk object holding data.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module ground.mc.chunk;
+module ground.miners.chunk;
+
+import ground.miners.data;
 
 
 struct ChunkData

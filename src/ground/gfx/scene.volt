@@ -17,7 +17,7 @@ import io = watt.io;
 
 import watt.math;
 
-import mc = ground.gfx.mc;
+import miners = ground.gfx.miners;
 
 import ground.gfx.voxel;
 import ground.gfx.magica;
@@ -95,7 +95,7 @@ fn setupGround()
 	buf := VoxelBuffer.make("ground/voxel/ground", vb);
 	vb.close();
 
-	gGroundObj.active = true;
+	gGroundObj.active = false;
 	gGroundObj.buf = buf;
 	gGroundObj.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 	gGroundObj.rot.normalize();
@@ -149,10 +149,10 @@ fn setupPsMvs()
 fn setupChunk()
 {
 	buf: VoxelBuffer;
-	mcMeshMaker: mc.VoxelMeshMaker;
+	minersMeshMaker: miners.VoxelMeshMaker;
 
-	vb := mcMeshMaker.makeStoneChunk();
-	buf = VoxelBuffer.make("ground/voxel/mc", vb);
+	vb := minersMeshMaker.makeStoneChunk();
+	buf = VoxelBuffer.make("ground/voxel/miners", vb);
 	vb.close();
 
 	chunk : VoxelObject* = &gChunks[0];
@@ -162,7 +162,7 @@ fn setupChunk()
 	chunk.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
 	chunk.rot.normalize();
 	chunk.scale = math.Vector3f.opCall(1.0f, 1.0f, 1.0f);
-	chunk.origin = math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+	chunk.origin = math.Point3f.opCall(8.0f, 9.0f, 8.0f);
 }
 
 struct VoxelObject
@@ -207,7 +207,7 @@ public:
 		                    GL_RGBA,          // format
 		                    GL_UNSIGNED_BYTE, // type
 		                    cast(void*)&math.Color4b.White);
-		texWhiteArray = mc.makeTexture();
+		texWhiteArray = miners.makeTexture();
 
 		fX := -20.0f;
 		fZ := -20.0f;
@@ -271,24 +271,32 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 		glBindSampler(0, voxelSampler);
+		glLineWidth(2.0f);
 
-		if (gGroundObj.active) { drawVoxel(ref vp, ref gGroundObj); }
+		objs: VoxelObject*[256];
+		count: u32;
+
+		if (gGroundObj.active) { objs[count++] = &gGroundObj; }
 		foreach (ref ball; gPsMvBall) {
-			if (ball.active) { drawVoxel(ref vp, ref ball); }
+			if (ball.active) { objs[count++] = &ball; }
 		}
 		foreach (ref only; gPsMvControllerOnly) {
-			if (only.active) { drawVoxel(ref vp, ref only); }
+			if (only.active) { objs[count++] = &only; }
 		}
 		foreach (ref complete; gPsMvComplete) {
-			if (complete.active) { drawVoxel(ref vp, ref complete); }
+			if (complete.active) { objs[count++] = &complete; }
 		}
 		foreach (ref axis; gAxis) {
-			if (axis.active) { drawVoxel(ref vp, ref axis); }
+			if (axis.active) { objs[count++] = &axis; }
 		}
 		foreach (ref chunk; gChunks) {
-			if (chunk.active) { drawVoxel(ref vp, ref chunk); }
+			if (chunk.active) { objs[count++] = &chunk; }
 		}
 
+		drawVoxelQuads(ref vp, objs[0 .. count]);
+		drawVoxelLines(ref vp, objs[0 .. count]);
+
+		glLineWidth(1.0f);
 		glBindSampler(0, 0);
 		glDisable(GL_DEPTH_TEST);
 
@@ -318,53 +326,78 @@ public:
 		glBindVertexArray(0);
 	}
 
-	fn drawVoxel(ref vp: math.Matrix4x4d, ref obj: VoxelObject)
+	fn drawVoxelLines(ref vp: math.Matrix4x4d, objs: VoxelObject*[])
 	{
-		model: math.Matrix4x4d;
-		model.setToModel(ref obj.pos, ref obj.rot, ref obj.scale, ref obj.origin);
-
-		matrix: math.Matrix4x4f;
-		matrix.setToMultiplyAndTranspose(ref vp, ref model);
-
-		// Shared for everything.
-		texWhiteArray.bind();
-
-		// Draw the voxels.
-		if (obj.buf.numQuadDatas > 0) {
-			voxelShader.bind();
-			voxelShader.matrix4("u_matrix", 1, false, ref matrix);
-
-			glBindVertexArray(voxelVAO);
-			glEnable(GL_POLYGON_OFFSET_FILL);
-			glPolygonOffset(1.0f, 1.0f);
-
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, obj.buf.buf);
-			glDrawElements(GL_TRIANGLES, obj.buf.numQuadDatas * 6, GL_UNSIGNED_INT, null);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-
-			glDisable(GL_POLYGON_OFFSET_FILL);
-			glBindVertexArray(0);
-		}
-
 		// Swap to the regular 2D texture.
-		texWhiteArray.unbind();
 		texWhite.bind();
 
 		// Draw the lines.
 		gfx.simpleShader.bind();
-		gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
 
-		glBindVertexArray(obj.buf.vao);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		glDrawArrays(GL_LINES, 0, obj.buf.numLineVertices);
+		foreach (obj; objs) {
+			if (obj.buf.numLineVertices == 0) {
+				continue;
+			}
+
+			model: math.Matrix4x4d;
+			model.setToModel(ref obj.pos, ref obj.rot, ref obj.scale, ref obj.origin);
+
+			matrix: math.Matrix4x4f;
+			matrix.setToMultiplyAndTranspose(ref vp, ref model);
+
+			gfx.simpleShader.matrix4("matrix", 1, false, ref matrix);
+
+			glBindVertexArray(obj.buf.vao);
+
+			glDrawArrays(GL_LINES, 0, obj.buf.numLineVertices);
+		}
 
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
 
 		// Finally remove the texture.
-		texWhite.bind();
+		texWhite.unbind();
+	}
+
+	fn drawVoxelQuads(ref vp: math.Matrix4x4d, objs: VoxelObject*[])
+	{
+		// Shared for everything.
+		texWhiteArray.bind();
+
+		// Draw the voxels.
+		voxelShader.bind();
+
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(1.0f, 1.0f);
+
+		foreach (obj; objs) {
+			if (obj.buf.numQuadDatas == 0) {
+				continue;
+			}
+
+			model: math.Matrix4x4d;
+			model.setToModel(ref obj.pos, ref obj.rot, ref obj.scale, ref obj.origin);
+
+			matrix: math.Matrix4x4f;
+			matrix.setToMultiplyAndTranspose(ref vp, ref model);
+
+			voxelShader.matrix4("u_matrix", 1, false, ref matrix);
+
+			glBindVertexArray(voxelVAO);
+
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, obj.buf.buf);
+			glDrawElements(GL_TRIANGLES, obj.buf.numQuadDatas * 6, GL_UNSIGNED_INT, null);
+		}
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		glBindVertexArray(0);
+
+		texWhiteArray.unbind();
 	}
 
 

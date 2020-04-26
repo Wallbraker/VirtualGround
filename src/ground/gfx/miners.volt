@@ -4,7 +4,7 @@
  * @brief  Code to to create minecraft like VoxelModels.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
-module ground.gfx.mc;
+module ground.gfx.miners;
 
 import core.exception;
 
@@ -17,14 +17,15 @@ import sys = charge.sys;
 
 import io = watt.io.file;
 
-import ground.mc.chunk;
 import ground.gfx.voxel;
 import ground.gfx.builder;
+import ground.miners.data;
+import ground.miners.chunk;
 
 
 fn makeTexture() gfx.Texture2DArray
 {
-	tex := gfx.Texture2DArray.makeRGBA8("ground/tex/mc", 16, 16, 256, 5);
+	tex := gfx.Texture2DArray.makeRGBA8("ground/tex/miners", 16, 16, 256, 5);
 
 	colors: math.Color4b[16][16];
 	foreach (ref y; colors) {
@@ -39,19 +40,23 @@ fn makeTexture() gfx.Texture2DArray
 	makeSolid16(tex, 1, blue);
 	makeSolid16(tex, 2, red);
 
-/*
-	try {
-		file := sys.File.fromImport(
-			"pp/default/default_stone.png",
-			import("pp/default/default_stone.png"));
-		tex.loadImageIntoLayer(file, 1);
-	} catch (Exception e) {
-	}
-*/
+	tex.loadImport(Id.Bedrock, "pp/blocks/bedrock_0.png", import("pp/assets/minecraft/textures/block/bedrock.png"));
+	tex.loadImport(Id.Stone, "pp/blocks/stone_0.png", import("pp/assets/minecraft/textures/block/stone.png"));
+	tex.loadImport(Id.Dirt, "pp/blocks/dirt_0.png", import("pp/assets/minecraft/textures/block/dirt.png"));
+	tex.loadImport(Id.Grass, "pp/blocks/grass_side_0.png", import("pp/assets/minecraft/textures/block/grass_block_side.png"));
 
 	glGenerateTextureMipmap(tex.id);
 
 	return tex;
+}
+
+fn loadImport(tex: gfx.Texture2DArray, layer: GLint, filename: string, data: string)
+{
+	try {
+		file := sys.File.fromImport(filename, data);
+		tex.loadImageIntoLayer(file, layer);
+	} catch (Exception e) {
+	}
 }
 
 fn makeSolid16(tex: gfx.Texture2DArray,
@@ -157,10 +162,26 @@ public:
 		foreach (z, ref arr_xy; chunk.data) {
 			foreach (y, ref arr_x; arr_xy) {
 				foreach (x, ref d; arr_x) {
-					d = ((x & 1) ^ ((y >> 1) & 1) ^ (z & 1)) ? 1 : 0;
+					switch (y) {
+					case 0: d = Id.Bedrock; break;
+					case 1, 2, 3, 4, 5: d = Id.Stone; break;
+					case 6, 7: d = Id.Dirt; break;
+					case 8: d = Id.Grass; break;
+					default: d = Id.Air; break;
+					}
 				}
 			}
 		}
+
+		fn clearY(x: i32, z: i32) {
+			foreach (y; 1 .. ChunkData.Dim) {
+				chunk.data[x][y][z] = Id.Air;
+			}
+		}
+		              clearY(7, 1); clearY(8, 1);
+		clearY(6, 2); clearY(7, 2); clearY(8, 2); clearY(9, 2);
+		clearY(6, 3); clearY(7, 3); clearY(8, 3); clearY(9, 3);
+		              clearY(7, 4); clearY(8, 4);
 
 		return makeChunk(&chunk);
 	}
@@ -388,11 +409,4 @@ public:
 
 		return &chunks[cx][cy][cz].data[bx][by][bz];
 	}
-}
-
-private:
-
-fn isSolid(data: u8) bool
-{
-	return data != 0;
 }
