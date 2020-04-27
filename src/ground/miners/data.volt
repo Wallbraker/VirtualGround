@@ -13,7 +13,7 @@ enum Id
 	Bedrock,
 	Stone,
 	Dirt,
-	Grass,
+	GrassBlock,
 
 	Wood,
 	Planks,
@@ -28,7 +28,7 @@ fn isSolid(id: Id) bool
 	final switch (id) with (Id) {
 	case Air:
 		return false;
-	case Bedrock, Stone, Dirt, Grass, Wood, Planks, Leaves, Sand, Sandstone:
+	case Bedrock, Stone, Dirt, GrassBlock, Wood, Planks, Leaves, Sand, Sandstone:
 		return true;
 	}
 }
