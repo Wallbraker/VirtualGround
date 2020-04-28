@@ -112,16 +112,16 @@ fn handleLineX(ref vmm: VoxelMeshMaker, b: VoxelBufferBuilder, y: i32, z: i32)
 		}
 
 		if (current != 0) {
-			b.addLineVertex(cast(f32)(x - vmm.offX) - lineNudges[current],
-			                cast(f32)(y - vmm.offY),
-			                cast(f32)(z - vmm.offZ),
+			b.addLineVertex(cast(f32)(x + vmm.offX) - lineNudges[current],
+			                cast(f32)(y + vmm.offY),
+			                cast(f32)(z + vmm.offZ),
 			                lineColors[current]);
 		}
 
 		if (line != 0) {
-			b.addLineVertex(cast(f32)(x - vmm.offX) + lineNudges[line],
-			                cast(f32)(y - vmm.offY),
-			                cast(f32)(z - vmm.offZ),
+			b.addLineVertex(cast(f32)(x + vmm.offX) + lineNudges[line],
+			                cast(f32)(y + vmm.offY),
+			                cast(f32)(z + vmm.offZ),
 			                lineColors[line]);
 		}
 
@@ -154,16 +154,16 @@ fn handleLineY(ref vmm: VoxelMeshMaker, b: VoxelBufferBuilder, x: i32, z: i32)
 		}
 
 		if (current != 0) {
-			b.addLineVertex(cast(f32)(x - vmm.offX),
-			                cast(f32)(y - vmm.offY)  - lineNudges[current],
-			                cast(f32)(z - vmm.offZ),
+			b.addLineVertex(cast(f32)(x + vmm.offX),
+			                cast(f32)(y + vmm.offY)  - lineNudges[current],
+			                cast(f32)(z + vmm.offZ),
 			                lineColors[current]);
 		}
 
 		if (line != 0) {
-			b.addLineVertex(cast(f32)(x - vmm.offX),
-			                cast(f32)(y - vmm.offY) + lineNudges[line],
-			                cast(f32)(z - vmm.offZ),
+			b.addLineVertex(cast(f32)(x + vmm.offX),
+			                cast(f32)(y + vmm.offY) + lineNudges[line],
+			                cast(f32)(z + vmm.offZ),
 			                lineColors[line]);
 		}
 
@@ -196,16 +196,16 @@ fn handleLineZ(ref vmm: VoxelMeshMaker, b: VoxelBufferBuilder, x: i32, y: i32)
 		}
 
 		if (current != 0) {
-			b.addLineVertex(cast(f32)(x - vmm.offX),
-			                cast(f32)(y - vmm.offY),
-			                cast(f32)(z - vmm.offZ) - lineNudges[current],
+			b.addLineVertex(cast(f32)(x + vmm.offX),
+			                cast(f32)(y + vmm.offY),
+			                cast(f32)(z + vmm.offZ) - lineNudges[current],
 			                lineColors[current]);
 		}
 
 		if (line != 0) {
-			b.addLineVertex(cast(f32)(x - vmm.offX),
-			                cast(f32)(y - vmm.offY),
-			                cast(f32)(z - vmm.offZ) + lineNudges[line],
+			b.addLineVertex(cast(f32)(x + vmm.offX),
+			                cast(f32)(y + vmm.offY),
+			                cast(f32)(z + vmm.offZ) + lineNudges[line],
 			                lineColors[line]);
 		}
 

@@ -17,7 +17,12 @@ import io = watt.io;
 
 import watt.math;
 
-import miners = ground.gfx.miners;
+import miners = [
+	ground.miners.data,
+	ground.miners.chunk,
+	ground.miners.fixed,
+	ground.gfx.miners,
+	];
 
 import ground.gfx.voxel;
 import ground.gfx.magica;
@@ -29,7 +34,7 @@ global gPsMvBall: VoxelObject[2];
 global gPsMvComplete: VoxelObject[2];
 global gPsMvControllerOnly: VoxelObject[2];
 global gAxis: VoxelObject[16];
-global gChunks: VoxelObject[16];
+global gChunks: VoxelObject[1024];
 
 fn setupAxis()
 {
@@ -151,18 +156,40 @@ fn setupChunk()
 	buf: VoxelBuffer;
 	minersMeshMaker: miners.VoxelMeshMaker;
 
-	vb := minersMeshMaker.makeStoneChunk();
-	buf = VoxelBuffer.make("ground/voxel/miners", vb);
-	vb.close();
+	terrain := new miners.FixedTerrain();
+	terrain.setYSlice(0, miners.Id.Bedrock);
+	foreach (y; 1 .. 13) {
+		terrain.setYSlice(y, miners.Id.Stone);
+	}
+	terrain.setYSlice(13, miners.Id.Dirt);
+	terrain.setYSlice(14, miners.Id.Dirt);
+	terrain.setYSlice(15, miners.Id.GrassBlock);
 
-	chunk : VoxelObject* = &gChunks[0];
+	numChunks: size_t;
+	for (x: i32; x < miners.FixedTerrain.DimX; x += miners.ChunkData.Dim) {
+		for (y: i32; y < miners.FixedTerrain.DimY; y += miners.ChunkData.Dim) {
+			for (z: i32; z < miners.FixedTerrain.DimZ; z += miners.ChunkData.Dim) {
+				vb := minersMeshMaker.makeChunk(terrain, x, y, z);
+				if (vb.empty) {
+					vb.close();
+					continue;
+				}
 
-	chunk.active = true;
-	chunk.buf = buf;
-	chunk.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
-	chunk.rot.normalize();
-	chunk.scale = math.Vector3f.opCall(1.0f, 1.0f, 1.0f);
-	chunk.origin = math.Point3f.opCall(8.0f, 9.0f, 8.0f);
+				buf = VoxelBuffer.make(new "ground/voxel/miners_${x}_${y}_${z}", vb);
+				vb.close();
+				chunk : VoxelObject* = &gChunks[numChunks++];
+				chunk.active = true;
+				chunk.buf = buf;
+				chunk.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+				chunk.rot.normalize();
+				chunk.pos = math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+				chunk.scale = math.Vector3f.opCall(1.0f, 1.0f, 1.0f);
+				chunk.origin = math.Point3f.opCall(64.0f, 16.0f, 64.0f);
+			}
+		}
+	}
+
+	terrain.close();
 }
 
 struct VoxelObject
@@ -273,7 +300,7 @@ public:
 		glBindSampler(0, voxelSampler);
 		glLineWidth(2.0f);
 
-		objs: VoxelObject*[256];
+		objs: VoxelObject*[1024];
 		count: u32;
 
 		if (gGroundObj.active) { objs[count++] = &gGroundObj; }

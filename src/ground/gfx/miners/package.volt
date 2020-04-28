@@ -21,6 +21,7 @@ import ground.gfx.voxel;
 import ground.gfx.builder;
 import ground.miners.data;
 import ground.miners.chunk;
+import ground.miners.fixed;
 import ground.gfx.miners.lines;
 import ground.gfx.miners.quads;
 
@@ -115,36 +116,32 @@ public:
 
 
 public:
-	fn makeStoneChunk() VoxelBufferBuilder
+	fn makeChunk(terrain: FixedTerrain, x: i32, y: i32, z: i32) VoxelBufferBuilder
 	{
-		chunk: ChunkData;
-		foreach (z, ref arr_xy; chunk.data) {
-			foreach (y, ref arr_x; arr_xy) {
-				foreach (x, ref d; arr_x) {
-					switch (y) {
-					case 0: d = Id.Bedrock; break;
-					case 1, 2, 3, 4, 5: d = Id.Stone; break;
-					case 6, 7: d = Id.Dirt; break;
-					case 8: d = Id.GrassBlock; break;
-					default: d = Id.Air; break;
-					}
+		foreach (cz, ref arr_xy; chunks) {
+			foreach (cy, ref arr_x; arr_xy) {
+				foreach (cx, ref chunk; arr_x) {
+					chunk = terrain.getChunk(
+						x + (cast(i32)cx - 1) * ChunkData.Dim,
+						y + (cast(i32)cy - 1) * ChunkData.Dim,
+						z + (cast(i32)cz - 1) * ChunkData.Dim);
 				}
 			}
 		}
 
-		fn clearY(x: i32, z: i32) {
-			foreach (y; 1 .. ChunkData.Dim) {
-				chunk.data[z][y][x] = Id.Air;
-			}
-		}
+		offX = x - ChunkData.Dim;
+		offY = y - ChunkData.Dim;
+		offZ = z - ChunkData.Dim;
 
-		              clearY(7, 1); clearY(8, 1);
-		clearY(6, 2); clearY(7, 2); clearY(8, 2); clearY(9, 2);
-		clearY(6, 3); clearY(7, 3); clearY(8, 3); clearY(9, 3);
-		              clearY(7, 4); clearY(8, 4);
-
-		return makeChunk(&chunk);
+		vb := new VoxelBufferBuilder();
+		makeQuads(vb);
+		vb.switchToLines();
+/*
+		this.makeLines(vb);
+*/
+		return vb;
 	}
+
 
 	fn makeChunk(chunk: ChunkData*) VoxelBufferBuilder
 	{
@@ -156,7 +153,7 @@ public:
 			}
 		}
 
-		offX = offY = offZ = ChunkData.Dim;
+		offX = offY = offZ = -ChunkData.Dim;
 
 		chunks[1][1][1] = chunk;
 
@@ -223,7 +220,7 @@ public:
 		by := y % ChunkData.Dim;
 		bz := z % ChunkData.Dim;
 
-		return &chunks[cx][cy][cz].data[bz][by][bx];
+		return &chunks[cz][cy][cx].data[bz][by][bx];
 	}
 
 	fn getTextureLayer(id: Id) u32

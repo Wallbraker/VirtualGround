@@ -108,7 +108,7 @@ fn addQuadXN(ref vmm: VoxelMeshMaker,
              x: i32, y: i32, z: i32,
              layer: u32, color: math.Color4b)
 {
-	vb.addQuad(x - vmm.offX, y - vmm.offY, z - vmm.offZ,
+	vb.addQuad(x + vmm.offX, y + vmm.offY, z + vmm.offZ,
 	           VoxelBufferBuilder.Side.XN,
 	           layer, color);
 }
@@ -118,7 +118,7 @@ fn addQuadXP(ref vmm: VoxelMeshMaker,
              x: i32, y: i32, z: i32,
              layer: u32, color: math.Color4b)
 {
-	vb.addQuad(x - vmm.offX, y - vmm.offY, z - vmm.offZ,
+	vb.addQuad(x + vmm.offX, y + vmm.offY, z + vmm.offZ,
 	           VoxelBufferBuilder.Side.XP,
 	           layer, color);
 }
@@ -128,7 +128,7 @@ fn addQuadYN(ref vmm: VoxelMeshMaker,
              x: i32, y: i32, z: i32,
              layer: u32, color: math.Color4b)
 {
-	vb.addQuad(x - vmm.offX, y - vmm.offY, z - vmm.offZ,
+	vb.addQuad(x + vmm.offX, y + vmm.offY, z + vmm.offZ,
 	           VoxelBufferBuilder.Side.YN,
 	           layer, color);
 }
@@ -138,7 +138,7 @@ fn addQuadYP(ref vmm: VoxelMeshMaker,
              x: i32, y: i32, z: i32,
              layer: u32, color: math.Color4b)
 {
-	vb.addQuad(x - vmm.offX, y - vmm.offY, z - vmm.offZ,
+	vb.addQuad(x + vmm.offX, y + vmm.offY, z + vmm.offZ,
 	           VoxelBufferBuilder.Side.YP,
 	           layer, color);
 }
@@ -148,7 +148,7 @@ fn addQuadZN(ref vmm: VoxelMeshMaker,
              x: i32, y: i32, z: i32,
              layer: u32, color: math.Color4b)
 {
-	vb.addQuad(x - vmm.offX, y - vmm.offY, z - vmm.offZ,
+	vb.addQuad(x + vmm.offX, y + vmm.offY, z + vmm.offZ,
 	           VoxelBufferBuilder.Side.ZN,
 	           layer, color);
 }
@@ -158,7 +158,7 @@ fn addQuadZP(ref vmm: VoxelMeshMaker,
              x: i32, y: i32, z: i32,
              layer: u32, color: math.Color4b)
 {
-	vb.addQuad(x - vmm.offX, y - vmm.offY, z - vmm.offZ,
+	vb.addQuad(x + vmm.offX, y + vmm.offY, z + vmm.offZ,
 	           VoxelBufferBuilder.Side.ZP,
 	           layer, color);
 }

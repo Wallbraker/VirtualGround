@@ -128,6 +128,11 @@ public:
 		super();
 	}
 
+	@property fn empty() bool
+	{
+		return length <= 0;
+	}
+
 	fn addLineVertex(x: f32, y: f32, z: f32, color: math.Color4b)
 	{
 		lv: LineVertex;
