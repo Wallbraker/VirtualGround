@@ -196,6 +196,62 @@ fn setupChunk()
 	terrain.close();
 }
 
+fn setupQuad()
+{
+	if (gOpenXR.headless) {
+		return;
+	}
+
+	width: u32 = 64;
+	height: u32 = 64;
+	data: math.Color4b[64][64];
+	transparent: math.Color4b = {0, 0, 0, 0};
+
+	foreach (y, ref xarr; data) {
+		foreach (x, ref colour; xarr) {
+			alpha: u8 = 255;
+
+			if (x >= 16 && x < 48 &&
+			    y >= 16 && y < 48) {
+			        alpha = 0;
+			}
+
+			xv := cast(u8)((cast(f32)x / (width - 1)) * 255);
+			yv := cast(u8)((cast(f32)y / (height - 1)) * 255);
+
+			colour = math.Color4b.from(xv, yv, 0, alpha);
+		}
+	}
+
+	q := &gOpenXR.quadHack;
+	q.create(ref gOpenXR, width, height);
+	q.active = true;
+
+	waitInfo: XrSwapchainImageWaitInfo;
+	waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
+
+	index: u32;
+	xrAcquireSwapchainImage(q.swapchain, null, &index);
+	xrWaitSwapchainImage(q.swapchain, &waitInfo);
+	glTextureSubImage2D(q.textures[index],
+	                    0,
+	                    0,
+	                    0, // yoffset
+	                    cast(GLsizei)width,
+	                    cast(GLsizei)height,
+	                    GL_RGBA,
+	                    GL_UNSIGNED_BYTE,
+	                    cast(void*)data.ptr);
+	xrReleaseSwapchainImage(q.swapchain, null);
+
+	q.pose.position.x = 0.0f;
+	q.pose.position.y = 1.0f;
+	q.pose.position.z = -2.0f;
+	q.pose.orientation.w = 1.0f;
+	q.size.width = 1.0f;
+	q.size.height = 1.0f;
+}
+
 struct VoxelObject
 {
 public:
@@ -260,31 +316,7 @@ public:
 		mSquareBuf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
 		gfx.destroy(ref b);
 
-		if (!gOpenXR.headless) {
-			q := &gOpenXR.quadHack;
-			q.create(ref gOpenXR, 256, 256);
-			q.active = true;
-
-			waitInfo: XrSwapchainImageWaitInfo;
-			waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
-
-			index: u32;
-			xrAcquireSwapchainImage(q.swapchain, null, &index);
-			xrWaitSwapchainImage(q.swapchain, &waitInfo);
-			glClearTexImage(q.textures[index],
-			                0,
-			                GL_RGBA,
-			                GL_UNSIGNED_BYTE,
-			                cast(void*)&math.Color4b.White);
-			xrReleaseSwapchainImage(q.swapchain, null);
-
-			q.pose.position.x = 0.0f;
-			q.pose.position.y = 1.0f;
-			q.pose.position.z = -2.0f;
-			q.pose.orientation.w = 1.0f;
-			q.size.width = 1.0f;
-			q.size.height = 1.0f;
-		}
+		setupQuad();
 	}
 
 	fn close()
