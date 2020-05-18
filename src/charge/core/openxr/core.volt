@@ -733,15 +733,32 @@ fn oneLoop(ref oxr: OpenXR,
 	layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
 	layer.viewCount = cast(u32)layerViews.length;
 	layer.views = layerViews.ptr;
+	layer.space = oxr.localSpace;
 
-	layers: XrCompositionLayerBaseHeader*[1];
-	layers[0] = cast(XrCompositionLayerBaseHeader*)&layer;
+	countLayers: u32;
+	layers: XrCompositionLayerBaseHeader*[2];
+	layers[countLayers++] = cast(XrCompositionLayerBaseHeader*)&layer;
+
+	quad: XrCompositionLayerQuad;
+	if (oxr.quadHack.active) {
+		quad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+		quad.space = oxr.localSpace;
+		quad.subImage.swapchain = oxr.quadHack.swapchain;
+		quad.subImage.imageRect.offset.x = 0;
+		quad.subImage.imageRect.offset.y = 0;
+		quad.subImage.imageRect.extent.width = cast(i32)oxr.quadHack.w;
+		quad.subImage.imageRect.extent.height = cast(i32)oxr.quadHack.h;
+		quad.pose = oxr.quadHack.pose;
+		quad.size = oxr.quadHack.size;
+
+		layers[countLayers++] = cast(XrCompositionLayerBaseHeader*)&quad;
+	}
 
 	endFrame: XrFrameEndInfo;
 	endFrame.type = XR_TYPE_FRAME_END_INFO;
 	endFrame.displayTime = predictedDisplayTime;
 	endFrame.environmentBlendMode = oxr.blendMode;
-	endFrame.layerCount = cast(u32)layers.length;
+	endFrame.layerCount = countLayers;
 	endFrame.layers = layers.ptr;
 
 	xrEndFrame(oxr.session, &endFrame);

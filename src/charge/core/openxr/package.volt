@@ -11,6 +11,8 @@ import amp.openxr;
 import lib.gl.gl45;
 
 import gfx = charge.gfx;
+import charge.core.openxr.enumerate;
+
 
 /*!
  * Global collection of OpenXR things.
@@ -65,6 +67,8 @@ struct OpenXR
 	views: View[];
 
 	updateActions: dg(XrTime) bool;
+
+	quadHack: Quad;
 }
 
 /*!
@@ -82,4 +86,80 @@ struct View
 	textures: GLuint[];
 	depth: GLuint;
 	targets: gfx.Target[];
+}
+
+struct Quad
+{
+public:
+	swapchain: XrSwapchain;
+	pose: XrPosef;
+	size: XrExtent2Df;
+	space: XrSpace;
+
+	w, h: u32;
+	textures: GLuint[];
+	targets: gfx.Target[];
+	active: bool;
+
+
+public:
+	fn destroy(ref oxr: OpenXR)
+	{
+		foreach (k, ref target; targets) {
+			gfx.reference(ref target, null);
+		}
+
+		if (swapchain !is cast(XrSwapchain)XR_NULL_HANDLE) {
+			xrDestroySwapchain(swapchain);
+			swapchain = cast(XrSwapchain)XR_NULL_HANDLE;
+		}
+
+		w = h = 0;
+		textures = null;
+		targets = null;
+	}
+
+	fn create(ref oxr: OpenXR, w: u32, h: u32)
+	{
+		destroy(ref oxr);
+
+		this.w = w;
+		this.h = h;
+
+		swapchainCreateInfo: XrSwapchainCreateInfo;
+		swapchainCreateInfo.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
+		swapchainCreateInfo.arraySize = 1;
+		swapchainCreateInfo.format = GL_RGBA8;
+		swapchainCreateInfo.width = w;
+		swapchainCreateInfo.height = h;
+		swapchainCreateInfo.mipCount = 1;
+		swapchainCreateInfo.faceCount = 1;
+		swapchainCreateInfo.sampleCount = 1;
+		swapchainCreateInfo.usageFlags = XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+
+		ret: XrResult;
+		ret = xrCreateSwapchain(oxr.session, &swapchainCreateInfo, &swapchain);
+		if (ret != XR_SUCCESS) {
+			oxr.log("xrCreateSwapchain failed!");
+			return;
+		}
+
+		ret = enumSwapchainImages(ref oxr, swapchain, out textures);
+		if (ret != XR_SUCCESS) {
+			oxr.log("xrCreateSwapchain failed!");
+			return;
+		}
+
+		targets = new gfx.Target[](textures.length);
+		foreach (k, ref target; targets) {
+			fbo: GLuint;
+			glGenFramebuffers(1, &fbo);
+			glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[k], 0);
+			name := new "openxr/quad/${k}";
+			target = gfx.ExtTarget.make(name, fbo, w, h);
+		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 }

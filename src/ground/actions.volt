@@ -153,6 +153,8 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 		gPsMvControllerOnly[hand].active = gPsMvBall[hand].active;
 		gPsMvControllerOnly[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
 		gPsMvControllerOnly[hand].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+
+		gOpenXR.quadHack.pose = spaceLocation.pose;
 	}
 
 	if (!gOpenXR.headless) {

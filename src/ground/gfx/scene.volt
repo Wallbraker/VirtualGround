@@ -28,6 +28,10 @@ import ground.gfx.voxel;
 import ground.gfx.magica;
 import ground.gfx.builder;
 
+import amp.openxr;
+import charge.core.openxr;
+import charge.core.openxr.enumerate;
+
 
 global gGroundObj: VoxelObject;
 global gPsMvBall: VoxelObject[2];
@@ -255,10 +259,38 @@ public:
 		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
 		mSquareBuf = gfx.SimpleBuffer.make("ground/gfx/ground", b);
 		gfx.destroy(ref b);
+
+		if (!gOpenXR.headless) {
+			q := &gOpenXR.quadHack;
+			q.create(ref gOpenXR, 256, 256);
+			q.active = true;
+
+			waitInfo: XrSwapchainImageWaitInfo;
+			waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
+
+			index: u32;
+			xrAcquireSwapchainImage(q.swapchain, null, &index);
+			xrWaitSwapchainImage(q.swapchain, &waitInfo);
+			glClearTexImage(q.textures[index],
+			                0,
+			                GL_RGBA,
+			                GL_UNSIGNED_BYTE,
+			                cast(void*)&math.Color4b.White);
+			xrReleaseSwapchainImage(q.swapchain, null);
+
+			q.pose.position.x = 0.0f;
+			q.pose.position.y = 1.0f;
+			q.pose.position.z = -2.0f;
+			q.pose.orientation.w = 1.0f;
+			q.size.width = 1.0f;
+			q.size.height = 1.0f;
+		}
 	}
 
 	fn close()
 	{
+		gOpenXR.quadHack.destroy(ref gOpenXR);
+
 		gGroundObj.close();
 		foreach (ref ball; gPsMvBall) {
 			ball.close();
