@@ -632,11 +632,11 @@ struct XrColor4f
 }
 
 
-// XR_MND_egl_enable
+// XR_MNDX_egl_enable
 
 import amp.egl.types;
 
-struct XrGraphicsBindingEGLMND
+struct XrGraphicsBindingEGLMNDX
 {
 	type: XrStructureType;
 	next: const(void)*;
@@ -647,7 +647,7 @@ struct XrGraphicsBindingEGLMND
 }
 
 
-// XR_KHR_opengl_enable || XR_MND_egl_enable
+// XR_KHR_opengl_enable || XR_MNDX_egl_enable
 
 struct XrSwapchainImageOpenGLKHR
 {

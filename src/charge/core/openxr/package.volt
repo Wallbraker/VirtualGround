@@ -43,7 +43,7 @@ struct OpenXR
 	//! Is this available from the current runtime.
 	XR_MND_headless: bool;
 	//! Is this available from the current runtime.
-	XR_MND_egl_enable: bool;
+	XR_MNDX_egl_enable: bool;
 
 	//! We are not rendering to the device.
 	headless: bool;

@@ -332,8 +332,8 @@ fn findExtensions(ref oxr: OpenXR) bool
 		case "XR_MND_headless":
 			oxr.XR_MND_headless = true;
 			break;
-		case "XR_MND_egl_enable":
-			oxr.XR_MND_egl_enable = true;
+		case "XR_MNDX_egl_enable":
+			oxr.XR_MNDX_egl_enable = true;
 			break;
 		default:
 		}
@@ -468,14 +468,14 @@ fn createInstanceEGL(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
 
-	if (!oxr.XR_MND_egl_enable) {
-		oxr.log("Doesn't have XR_MND_egl_enable! :(");
+	if (!oxr.XR_MNDX_egl_enable) {
+		oxr.log("Doesn't have XR_MNDX_egl_enable! :(");
 		return false;
 	}
 
 	exts: const(char)*[2] = [
 		"XR_KHR_convert_timespec_time".ptr,
-		"XR_MND_egl_enable".ptr,
+		"XR_MNDX_egl_enable".ptr,
 	];
 
 	createInfo: XrInstanceCreateInfo;
@@ -529,8 +529,8 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 	}
 	oxr.blendMode = envBlendModes[0];
 
-	eglInfo: XrGraphicsBindingEGLMND;
-	eglInfo.type = XR_TYPE_GRAPHICS_BINDING_EGL_MND;
+	eglInfo: XrGraphicsBindingEGLMNDX;
+	eglInfo.type = XR_TYPE_GRAPHICS_BINDING_EGL_MNDX;
 	eglInfo.getProcAddress = eglGetProcAddress;
 	eglInfo.display = egl.dpy;
 	eglInfo.config = egl.cfg;
