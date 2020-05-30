@@ -655,3 +655,11 @@ struct XrSwapchainImageOpenGLKHR
 	next: void*;
 	image: u32;
 }
+
+struct XrGraphicsRequirementsOpenGLKHR
+{
+    type: XrStructureType;
+    next: void*;
+    minApiVersionSupported: XrVersion;
+    maxApiVersionSupported: XrVersion;
+}

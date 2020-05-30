@@ -73,3 +73,5 @@ fn xrEnumerateBoundSourcesForAction(session: XrSession, enumerateInfo: const XrB
 fn xrGetInputSourceLocalizedName(session: XrSession, getInfo: const XrInputSourceLocalizedNameGetInfo*, bufferCapacityInput: u32, bufferCountOutput: u32*, buffer: char*) XrResult;
 fn xrApplyHapticFeedback(session: XrSession, hapticActionInfo: const XrHapticActionInfo*, hapticFeedback: const XrHapticBaseHeader*) XrResult;
 fn xrStopHapticFeedback(session: XrSession, hapticActionInfo: const XrHapticActionInfo*) XrResult;
+
+fn xrGetOpenGLGraphicsRequirementsKHR(instance: XrInstance, systemId: XrSystemId, graphicsRequirements: XrGraphicsRequirementsOpenGLKHR*) XrResult;

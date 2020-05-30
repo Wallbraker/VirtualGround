@@ -79,5 +79,7 @@ fn loadInstanceFunctions(instance: XrInstance) bool
 	xrGetInstanceProcAddr(instance, "xrApplyHapticFeedback".ptr, cast(PFN_xrVoidFunction*)&xrApplyHapticFeedback);
 	xrGetInstanceProcAddr(instance, "xrStopHapticFeedback".ptr, cast(PFN_xrVoidFunction*)&xrStopHapticFeedback);
 
+	xrGetInstanceProcAddr(instance, "xrGetOpenGLGraphicsRequirementsKHR".ptr, cast(PFN_xrVoidFunction*)&xrGetOpenGLGraphicsRequirementsKHR);
+
 	return true;
 }

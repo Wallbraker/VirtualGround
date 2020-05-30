@@ -473,8 +473,9 @@ fn createInstanceEGL(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	exts: const(char)*[2] = [
+	exts: const(char)*[3] = [
 		"XR_KHR_convert_timespec_time".ptr,
+		"XR_KHR_opengl_enable".ptr,
 		"XR_MNDX_egl_enable".ptr,
 	];
 
@@ -519,6 +520,11 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 		return false;
 	}
 
+	// Spec requires that we call this function.
+	reqs: XrGraphicsRequirementsOpenGLKHR;
+	reqs.type = XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR;
+	xrGetOpenGLGraphicsRequirementsKHR(oxr.instance, oxr.systemId, &reqs);
+
 	// Hard coded for now.
 	oxr.viewConfigType = XrViewConfigurationType.XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
@@ -528,6 +534,7 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 		return false;
 	}
 	oxr.blendMode = envBlendModes[0];
+
 
 	eglInfo: XrGraphicsBindingEGLMNDX;
 	eglInfo.type = XR_TYPE_GRAPHICS_BINDING_EGL_MNDX;
