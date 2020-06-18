@@ -757,6 +757,7 @@ fn oneLoop(ref oxr: OpenXR,
 		quad.subImage.imageRect.extent.height = cast(i32)oxr.quadHack.h;
 		quad.pose = oxr.quadHack.pose;
 		quad.size = oxr.quadHack.size;
+		quad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 
 		layers[countLayers++] = cast(XrCompositionLayerBaseHeader*)&quad;
 	}
