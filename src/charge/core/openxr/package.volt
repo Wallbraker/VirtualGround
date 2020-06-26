@@ -26,7 +26,17 @@ global gOpenXR: OpenXR;
 enum Mode
 {
 	Normal,
+	Overlay,
 	Headless,
+}
+
+struct Extentions
+{
+	XR_KHR_convert_timespec_time: bool;
+	XR_KHR_opengl_enable: bool;
+	XR_MND_headless: bool;
+	XR_MNDX_egl_enable: bool;
+	XR_EXTX_overlay: bool;
 }
 
 /*!
@@ -40,17 +50,17 @@ struct OpenXR
 	//! Loaded loader library (not runtime).
 	lib: watt.Library;
 
-	//! Is this available from the current runtime.
-	XR_MND_headless: bool;
-	//! Is this available from the current runtime.
-	XR_MNDX_egl_enable: bool;
-
 	//! We are not rendering to the device.
 	headless: bool;
 
 	instance: XrInstance;
 	systemId: XrSystemId;
 	session: XrSession;
+
+	//! Is this available from the current runtime.
+	have: Extentions;
+	//! Is this extension enabled.
+	enabled: Extentions;
 
 	//! Selected blend mode.
 	blendMode: XrEnvironmentBlendMode;

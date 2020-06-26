@@ -14,7 +14,7 @@ import ctl = charge.ctl;
 import math = charge.math;
 import scene = charge.game.scene;
 
-import charge.core.openxr : Mode;
+import charge.core.openxr : Mode, gOpenXR;
 import charge.core.openxr.core : CoreOpenXR;
 
 import ground.gfx;
@@ -37,7 +37,14 @@ public:
 		opts.width = 1920;
 		opts.height = 1080;
 
-		mode := args.length >= 2 ? Mode.Headless : Mode.Normal;
+		mode := Mode.Normal;
+		switch (args.length >= 2 ? args[1] : "normal") {
+		case "normal": mode = Mode.Normal; break;
+		case "overlay": mode = Mode.Overlay; break;
+		case "headless": mode = Mode.Headless; break;
+		default: mode = Mode.Normal; break;
+		}
+
 		core := new CoreOpenXR(opts, mode);
 
 		super(core);

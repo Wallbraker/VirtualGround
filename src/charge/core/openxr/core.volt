@@ -62,9 +62,10 @@ public:
 
 		final switch (mode) {
 		case Mode.Normal:
+		case Mode.Overlay:
 			new InputOpenXR();
 
-			if (!initOpenXRAndEGL(ref gOpenXR, ref this.egl)) {
+			if (!initOpenXRAndEGL(ref gOpenXR, ref this.egl, mode)) {
 				panic("Failed to init OpenXR or EGL");
 			}
 
@@ -261,11 +262,11 @@ class KeyboardOpenXR : ctl.Keyboard
  *
  */
 
-fn initOpenXRAndEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
+fn initOpenXRAndEGL(ref oxr: OpenXR, ref egl: egl.EGL, mode: Mode) bool
 {
 	return oxr.setupLoader() &&
 	       oxr.findExtensions() &&
-	       oxr.createInstanceEGL() &&
+	       oxr.createInstanceEGL(mode) &&
 	       .egl.initEGL(ref egl) &&
 	       oxr.createSessionEGL(ref egl) &&
 	       oxr.createViewsGL() &&
@@ -329,11 +330,20 @@ fn findExtensions(ref oxr: OpenXR) bool
 	foreach (ref ext; extProps) {
 		name := watt.toString(ext.extensionName.ptr);
 		switch (name) {
+		case "XR_KHR_convert_timespec_time":
+			oxr.have.XR_KHR_convert_timespec_time = true;
+			break;
+		case "XR_KHR_opengl_enable":
+			oxr.have.XR_KHR_opengl_enable = true;
+			break;
 		case "XR_MND_headless":
-			oxr.XR_MND_headless = true;
+			oxr.have.XR_MND_headless = true;
 			break;
 		case "XR_MNDX_egl_enable":
-			oxr.XR_MNDX_egl_enable = true;
+			oxr.have.XR_MNDX_egl_enable = true;
+			break;
+		case "XR_EXTX_overlay":
+			oxr.have.XR_EXTX_overlay = true;
 			break;
 		default:
 		}
@@ -362,7 +372,7 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
 
-	if (!oxr.XR_MND_headless) {
+	if (!oxr.have.XR_MND_headless) {
 		oxr.log("Doesn't have XR_MND_headless! :(");
 		return false;
 	}
@@ -371,6 +381,7 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 		"XR_KHR_convert_timespec_time".ptr,
 		"XR_MND_headless".ptr,
 	];
+
 
 	createInfo: XrInstanceCreateInfo;
 	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
@@ -387,6 +398,9 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 		oxr.log("Failed to create instance");
 		return false;
 	}
+
+	oxr.enabled.XR_KHR_convert_timespec_time = true;
+	oxr.enabled.XR_MND_headless = true;
 
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
@@ -464,20 +478,30 @@ fn createViewsHeadless(ref oxr: OpenXR) bool
 	return true;
 }
 
-fn createInstanceEGL(ref oxr: OpenXR) bool
+fn createInstanceEGL(ref oxr: OpenXR, mode: Mode) bool
 {
 	ret: XrResult;
 
-	if (!oxr.XR_MNDX_egl_enable) {
+	if (!oxr.have.XR_MNDX_egl_enable) {
 		oxr.log("Doesn't have XR_MNDX_egl_enable! :(");
 		return false;
 	}
 
-	exts: const(char)*[3] = [
+	if (!oxr.have.XR_KHR_opengl_enable) {
+		oxr.log("Doesn't have XR_KHR_opengl_enable! :(");
+		return false;
+	}
+
+	exts: const(char)*[] = [
 		"XR_KHR_convert_timespec_time".ptr,
 		"XR_KHR_opengl_enable".ptr,
 		"XR_MNDX_egl_enable".ptr,
 	];
+
+	overlay: bool = oxr.have.XR_EXTX_overlay && mode == Mode.Overlay;
+	if (overlay) {
+		exts ~= "XR_EXTX_overlay".ptr;
+	}
 
 	createInfo: XrInstanceCreateInfo;
 	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
@@ -494,6 +518,11 @@ fn createInstanceEGL(ref oxr: OpenXR) bool
 		oxr.log("Failed to create instance");
 		return false;
 	}
+
+	oxr.enabled.XR_KHR_convert_timespec_time = true;
+	oxr.enabled.XR_KHR_opengl_enable = true;
+	oxr.enabled.XR_MND_headless = true;
+	oxr.enabled.XR_EXTX_overlay = overlay;
 
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
@@ -535,17 +564,28 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 	}
 	oxr.blendMode = envBlendModes[0];
 
+	next: void*;
 
 	eglInfo: XrGraphicsBindingEGLMNDX;
 	eglInfo.type = XR_TYPE_GRAPHICS_BINDING_EGL_MNDX;
+	eglInfo.next = null;
 	eglInfo.getProcAddress = eglGetProcAddress;
 	eglInfo.display = egl.dpy;
 	eglInfo.config = egl.cfg;
 	eglInfo.context = egl.ctx;
+	next = cast(void*)&eglInfo;
+
+	overlayInfo: XrSessionCreateInfoOverlayEXTX;
+	overlayInfo.type = XR_TYPE_SESSION_CREATE_INFO_OVERLAY_EXTX;
+	overlayInfo.next = next;
+
+	if (oxr.enabled.XR_EXTX_overlay) {
+		next = cast(void*)&overlayInfo;
+	}
 
 	createInfo: XrSessionCreateInfo;
 	createInfo.type = XR_TYPE_SESSION_CREATE_INFO;
-	createInfo.next = cast(void*)&eglInfo;
+	createInfo.next = next;
 	createInfo.systemId = oxr.systemId;
 	ret = xrCreateSession(oxr.instance, &createInfo, &oxr.session);
 	if (ret != XR_SUCCESS) {
@@ -741,6 +781,7 @@ fn oneLoop(ref oxr: OpenXR,
 	layer.viewCount = cast(u32)layerViews.length;
 	layer.views = layerViews.ptr;
 	layer.space = oxr.localSpace;
+	layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 
 	countLayers: u32;
 	layers: XrCompositionLayerBaseHeader*[2];
@@ -768,6 +809,7 @@ fn oneLoop(ref oxr: OpenXR,
 	endFrame.environmentBlendMode = oxr.blendMode;
 	endFrame.layerCount = countLayers;
 	endFrame.layers = layers.ptr;
+
 
 	xrEndFrame(oxr.session, &endFrame);
 
