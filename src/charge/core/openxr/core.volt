@@ -630,7 +630,7 @@ fn createViewsGL(ref oxr: OpenXR) bool
 		swapchainCreateInfo: XrSwapchainCreateInfo;
 		swapchainCreateInfo.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
 		swapchainCreateInfo.arraySize = 1;
-		swapchainCreateInfo.format = GL_RGBA8;
+		swapchainCreateInfo.format = GL_SRGB8_ALPHA8;
 		swapchainCreateInfo.width = viewConfig.recommendedImageRectWidth;
 		swapchainCreateInfo.height = viewConfig.recommendedImageRectHeight;
 		swapchainCreateInfo.mipCount = 1;
