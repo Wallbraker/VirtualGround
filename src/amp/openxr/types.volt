@@ -658,8 +658,37 @@ struct XrSwapchainImageOpenGLKHR
 
 struct XrGraphicsRequirementsOpenGLKHR
 {
-    type: XrStructureType;
-    next: void*;
-    minApiVersionSupported: XrVersion;
-    maxApiVersionSupported: XrVersion;
+	type: XrStructureType;
+	next: void*;
+	minApiVersionSupported: XrVersion;
+	maxApiVersionSupported: XrVersion;
+}
+
+
+// XR_EXTX_overlay
+
+enum XrOverlaySessionCreateFlagsEXTX : u64
+{
+	XR_OVERLAY_SESSION_CREATE_RELAXED_DISPLAY_TIME_BIT_EXTX = 0x00000001,
+}
+
+enum XrOverlayMainSessionFlagsEXTX : u64
+{
+	XR_OVERLAY_MAIN_SESSION_ENABLED_COMPOSITION_LAYER_INFO_DEPTH_BIT_EXTX = 0x00000001,
+}
+
+struct XrSessionCreateInfoOverlayEXTX
+{
+	type: XrStructureType;
+	next: void*;
+	createFlags: XrOverlaySessionCreateFlagsEXTX;
+	sessionLayersPlacement: u32;
+}
+
+struct XrEventDataMainSessionVisibilityChangedEXTX
+{
+	type: XrStructureType;
+	next: void*;
+	visible: XrBool32;
+	flags: XrOverlayMainSessionFlagsEXTX;
 }
