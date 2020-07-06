@@ -210,7 +210,7 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 {
 	iProfKhrSimple: XrPath;
 	iProfGoogleDaydream: XrPath;
-	iProfMndBallOnStick: XrPath;
+	iProfMndxBallOnAStick: XrPath;
 
 	subPathUser: XrPath;
 	subPathHead: XrPath;
@@ -237,7 +237,7 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 
 	xrStringToPath(gOpenXR.instance, "/interaction_profiles/khr/simple_controller", &iProfKhrSimple);
 	xrStringToPath(gOpenXR.instance, "/interaction_profiles/google/daydream_controller", &iProfGoogleDaydream);
-	xrStringToPath(gOpenXR.instance, "/interaction_profiles/mnd/ball_on_stick_controller", &iProfMndBallOnStick);
+	xrStringToPath(gOpenXR.instance, "/interaction_profiles/mndx/ball_on_a_stick_controller", &iProfMndxBallOnAStick);
 
 	xrStringToPath(gOpenXR.instance, "/user", &subPathUser);
 	xrStringToPath(gOpenXR.instance, "/user/hand/head", &subPathHead);
@@ -265,16 +265,16 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 	xrStringToPath(gOpenXR.instance, "/user/hand/right/output/haptic", &hapticPath[Side.Right]);
 	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/menu/click", &menuClickPath[Side.Left]);
 	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/menu/click", &menuClickPath[Side.Right]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/cross_mnd/click", &moveCrossClickPath[Side.Left]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/cross_mnd/click", &moveCrossClickPath[Side.Right]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/square_mnd/click", &moveSquareClickPath[Side.Left]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/square_mnd/click", &moveSquareClickPath[Side.Right]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/circle_mnd/click", &moveCircleClickPath[Side.Left]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/circle_mnd/click", &moveCircleClickPath[Side.Right]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/triangle_mnd/click", &moveTriangleClickPath[Side.Left]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/triangle_mnd/click", &moveTriangleClickPath[Side.Right]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/ball_mnd/pose", &moveBallPosePath[Side.Left]);
-	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/ball_mnd/pose", &moveBallPosePath[Side.Right]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/cross_mndx/click", &moveCrossClickPath[Side.Left]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/cross_mndx/click", &moveCrossClickPath[Side.Right]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/square_mndx/click", &moveSquareClickPath[Side.Left]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/square_mndx/click", &moveSquareClickPath[Side.Right]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/circle_mndx/click", &moveCircleClickPath[Side.Left]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/circle_mndx/click", &moveCircleClickPath[Side.Right]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/triangle_mndx/click", &moveTriangleClickPath[Side.Left]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/triangle_mndx/click", &moveTriangleClickPath[Side.Right]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/left/input/ball_mndx/pose", &moveBallPosePath[Side.Left]);
+	xrStringToPath(gOpenXR.instance, "/user/hand/right/input/ball_mndx/pose", &moveBallPosePath[Side.Right]);
 
 	handSubactionPaths: XrPath[2] = [
 		subPathLeft,
@@ -355,7 +355,7 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 			{move.ballPose, moveBallPosePath[Side.Right]},
 		];
 
-		suggest(iProfMndBallOnStick, bindings);
+		suggest(iProfMndxBallOnAStick, bindings);
 	}
 
 	actionSets: XrActionSet[2] = [
