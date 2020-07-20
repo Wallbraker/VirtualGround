@@ -121,7 +121,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 			continue;
 		}
 
-		ret = xrLocateSpace(move.ballSpace[hand], gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
+		ret = xrLocateSpace(move.ballSpace[hand], gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvBall[hand].active = false;
 			continue;
@@ -139,7 +139,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 			continue;
 		}
 
-		ret = xrLocateSpace(gameplay.gripSpace[hand], gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
+		ret = xrLocateSpace(gameplay.gripSpace[hand], gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvComplete[hand].active = false;
 			gPsMvControllerOnly[hand].active = false;
@@ -161,7 +161,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 		return true;
 	}
 
-	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.localSpace, predictedDisplayTime, &spaceLocation);
+	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
 	if (ret == XR_SUCCESS) {
 		gAxis[gOpenXR.views.length].active = true;
 		gAxis[gOpenXR.views.length].pos = *cast(math.Point3f*) &spaceLocation.pose.position;

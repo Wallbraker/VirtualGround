@@ -130,7 +130,7 @@ fn enumViews(ref oxr: OpenXR, predictedDisplayTime: XrTime, ref views: XrView[32
 	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
 	viewLocateInfo.viewConfigurationType = oxr.viewConfigType;
 	viewLocateInfo.displayTime = predictedDisplayTime;
-	viewLocateInfo.space = oxr.localSpace;
+	viewLocateInfo.space = oxr.stageSpace;
 
 	viewState: XrViewState;
 	viewState.type = XR_TYPE_VIEW_STATE;

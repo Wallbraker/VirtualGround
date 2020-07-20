@@ -71,7 +71,7 @@ struct OpenXR
 	//! Config for each view.
 	viewConfigs: XrViewConfigurationView[];
 
-	localSpace: XrSpace;
+	stageSpace: XrSpace;
 	viewSpace: XrSpace;
 
 	views: View[];

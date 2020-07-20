@@ -446,7 +446,7 @@ fn createSessionHeadless(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_LOCAL, out oxr.localSpace) ||
+	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
 	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
 		return false;
 	}
@@ -593,7 +593,7 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 		return false;
 	}
 
-	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_LOCAL, out oxr.localSpace) ||
+	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
 	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
 		return false;
 	}
@@ -780,7 +780,7 @@ fn oneLoop(ref oxr: OpenXR,
 	layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
 	layer.viewCount = cast(u32)layerViews.length;
 	layer.views = layerViews.ptr;
-	layer.space = oxr.localSpace;
+	layer.space = oxr.stageSpace;
 	layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 
 	countLayers: u32;
@@ -790,7 +790,7 @@ fn oneLoop(ref oxr: OpenXR,
 	quad: XrCompositionLayerQuad;
 	if (oxr.quadHack.active) {
 		quad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
-		quad.space = oxr.localSpace;
+		quad.space = oxr.stageSpace;
 		quad.subImage.swapchain = oxr.quadHack.swapchain;
 		quad.subImage.imageRect.offset.x = 0;
 		quad.subImage.imageRect.offset.y = 0;
