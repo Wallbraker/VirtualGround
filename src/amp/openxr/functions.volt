@@ -8,6 +8,8 @@ module amp.openxr.functions;
 import amp.openxr.enums;
 import amp.openxr.types;
 
+import core.c.posix.time : timespec;
+
 
 // Version 1.0
 
@@ -75,3 +77,6 @@ fn xrApplyHapticFeedback(session: XrSession, hapticActionInfo: const XrHapticAct
 fn xrStopHapticFeedback(session: XrSession, hapticActionInfo: const XrHapticActionInfo*) XrResult;
 
 fn xrGetOpenGLGraphicsRequirementsKHR(instance: XrInstance, systemId: XrSystemId, graphicsRequirements: XrGraphicsRequirementsOpenGLKHR*) XrResult;
+
+fn xrConvertTimespecTimeToTimeKHR(instance: XrInstance, timespecTime: const(timespec)*, time: XrTime*) XrResult;
+fn xrConvertTimeToTimespecTimeKHR(instance: XrInstance, time: XrTime, timespecTime: timespec*) XrResult;

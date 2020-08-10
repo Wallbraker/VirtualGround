@@ -81,5 +81,8 @@ fn loadInstanceFunctions(instance: XrInstance) bool
 
 	xrGetInstanceProcAddr(instance, "xrGetOpenGLGraphicsRequirementsKHR".ptr, cast(PFN_xrVoidFunction*)&xrGetOpenGLGraphicsRequirementsKHR);
 
+	xrGetInstanceProcAddr(instance, "xrConvertTimespecTimeToTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimespecTimeToTimeKHR);
+	xrGetInstanceProcAddr(instance, "xrConvertTimeToTimespecTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimeToTimespecTimeKHR);
+
 	return true;
 }
