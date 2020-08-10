@@ -9,6 +9,7 @@ module charge.core.openxr.core;
 import core.exception;
 import core.c.stdio : fprintf, fflush, stderr;
 import core.c.stdlib : exit;
+import core.c.posix.time : timespec, CLOCK_MONOTONIC, clock_gettime;
 
 import watt = [watt.library, watt.conv];
 
@@ -212,7 +213,13 @@ private:
 
 	fn chainRender(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
-		updateActionsDg(0);
+		ts: timespec;
+		time: XrTime;
+
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		xrConvertTimespecTimeToTimeKHR(gOpenXR.instance, &ts, &time);
+
+		updateActionsDg(time);
 
 		renderDg(t, ref viewInfo);
 	}
