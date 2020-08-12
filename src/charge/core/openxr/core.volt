@@ -182,6 +182,7 @@ private:
 		p.collect();
 		p.cleanAndLeakCheck(io.output.write);
 		cMemoryPrintAll(io.output.write);
+		io.output.writefln("Shutdown!");
 		io.output.flush();
 	}
 
