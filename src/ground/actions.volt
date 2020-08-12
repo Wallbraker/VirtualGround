@@ -8,6 +8,7 @@ module ground.actions;
 
 import amp.openxr;
 import math = charge.math;
+import sys = charge.sys;
 
 import charge.core.openxr : gOpenXR;
 import charge.core.openxr.enumerate;
@@ -74,6 +75,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
 		gOpenXR.log("Triangle");
+		gOpenXR.log(new "Memory usage: ${sys.cMemoryUsage()}");
 	}
 
 	getInfo.action = move.circle;
