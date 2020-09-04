@@ -43,6 +43,28 @@ struct GameplayActions
 	gripSpace: XrSpace[2];
 }
 
+fn updateVoxelObject(ref obj: VoxelObject, ref loc: XrSpaceLocation)
+{
+	if ((loc.locationFlags & XrSpaceLocationFlags.XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0) {
+		obj.active = true;
+		obj.pos = *cast(math.Point3f*) &loc.pose.position;
+	} else {
+		obj.active = false;
+		obj.pos.x = 0.0f;
+		obj.pos.y = 0.0f;
+		obj.pos.z = 0.0f;
+	}
+
+	if ((loc.locationFlags & XrSpaceLocationFlags.XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0) {
+		obj.rot = *cast(math.Quatf*) &loc.pose.orientation;
+	} else {
+		obj.rot.x = 0.0f;
+		obj.rot.y = 0.0f;
+		obj.rot.z = 0.0f;
+		obj.rot.w = 1.0f;
+	}
+}
+
 fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predictedDisplayTime: XrTime) bool
 {
 	activeActionSet: XrActiveActionSet[2] = [
@@ -129,8 +151,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 			continue;
 		}
 
-		gPsMvBall[hand].active = true;
-		gPsMvBall[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+		gPsMvBall[hand].updateVoxelObject(ref spaceLocation);
 	}
 
 	foreach (hand; 0 .. 2) {
@@ -148,15 +169,14 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 			continue;
 		}
 
-		gPsMvComplete[hand].active = !gPsMvBall[hand].active;
-		gPsMvComplete[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
-		gPsMvComplete[hand].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+		gPsMvComplete[hand].updateVoxelObject(ref spaceLocation);
+		gPsMvComplete[hand].active = !gPsMvBall[hand].active && gPsMvComplete[hand].active;
 
-		gPsMvControllerOnly[hand].active = gPsMvBall[hand].active;
-		gPsMvControllerOnly[hand].pos = *cast(math.Point3f*) &spaceLocation.pose.position;
-		gPsMvControllerOnly[hand].rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+		gPsMvControllerOnly[hand].updateVoxelObject(ref spaceLocation);
+		gPsMvControllerOnly[hand].active = gPsMvBall[hand].active && gPsMvControllerOnly[hand].active;
 
-		gOpenXR.quadHack.pose = spaceLocation.pose;
+		gOpenXR.quadHack.pose.orientation = *cast(XrQuaternionf*) &gPsMvControllerOnly[hand].rot;
+		gOpenXR.quadHack.pose.position = *cast(XrVector3f*) &gPsMvControllerOnly[hand].pos;
 	}
 
 	if (!gOpenXR.headless) {
