@@ -205,7 +205,6 @@ fn setupQuad()
 	width: u32 = 64;
 	height: u32 = 64;
 	data: math.Color4b[64][64];
-	transparent: math.Color4b = {0, 0, 0, 0};
 
 	foreach (y, ref xarr; data) {
 		foreach (x, ref colour; xarr) {
