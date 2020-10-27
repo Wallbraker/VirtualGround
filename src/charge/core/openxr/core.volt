@@ -789,7 +789,8 @@ fn oneLoop(ref oxr: OpenXR,
 	layer.viewCount = cast(u32)layerViews.length;
 	layer.views = layerViews.ptr;
 	layer.space = oxr.stageSpace;
-	layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+	layer.layerFlags |= XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+	layer.layerFlags |= XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT;
 
 	countLayers: u32;
 	layers: XrCompositionLayerBaseHeader*[2];
@@ -806,7 +807,8 @@ fn oneLoop(ref oxr: OpenXR,
 		quad.subImage.imageRect.extent.height = cast(i32)oxr.quadHack.h;
 		quad.pose = oxr.quadHack.pose;
 		quad.size = oxr.quadHack.size;
-		quad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+		quad.layerFlags |= XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+		quad.layerFlags |= XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT;
 
 		layers[countLayers++] = cast(XrCompositionLayerBaseHeader*)&quad;
 	}
