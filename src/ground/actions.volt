@@ -391,10 +391,10 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 	attachInfo.actionSets = actionSets.ptr;
 	xrAttachSessionActionSets(gOpenXR.session, &attachInfo);
 
-
-        actionSpaceInfo: XrActionSpaceCreateInfo;
-        actionSpaceInfo.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
-	actionSpaceInfo.poseInActionSpace.orientation.w = 1.f;
+	actionSpaceInfo: XrActionSpaceCreateInfo;
+	actionSpaceInfo.type = XR_TYPE_ACTION_SPACE_CREATE_INFO;
+	actionSpaceInfo.poseInActionSpace.orientation.x = -0.7071068f;
+	actionSpaceInfo.poseInActionSpace.orientation.w = 0.7071068f;
 
 	// Pose action
 	actionSpaceInfo.action = gameplay.gripPose;
