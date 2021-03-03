@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2021, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or Apache-2.0
 /*!
  * @brief  Loader functions.
@@ -6,13 +6,46 @@
  */
 module amp.egl.loader;
 
+import amp.egl.enums;
+import amp.egl.types;
 import amp.egl.functions;
-import watt = [watt.library];
+import amp.egl.exts;
+import watt = [watt.library, watt.conv];
+import watt.text.string : indexOf;
 
 
 fn loadEGL() watt.Library
 {
 	return watt.Library.load("libEGL.so.1");
+}
+
+fn loadClientExtensions() bool
+{
+	const(char) *c_str = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
+	if (c_str is null) {
+		return false;
+	}
+
+	str := watt.toString(c_str);
+	EGL_EXT_client_extensions = str.indexOf("EGL_EXT_client_extensions") >= 0;
+	EGL_EXT_platform_base = str.indexOf("EGL_EXT_platform_base") >= 0;
+	EGL_MESA_platform_surfaceless = str.indexOf("EGL_MESA_platform_surfaceless") >= 0;
+
+	return true;
+}
+
+fn loadExtensions(dpy: EGLDisplay) bool
+{
+	const(char) *c_str = eglQueryString(dpy, EGL_EXTENSIONS);
+	if (c_str is null) {
+		return false;
+	}
+
+	str := watt.toString(c_str);
+	EGL_KHR_create_context = str.indexOf("EGL_KHR_create_context") >= 0;
+	EGL_KHR_no_config_context = str.indexOf("EGL_KHR_no_config_context") >= 0;
+
+	return true;
 }
 
 fn loadFuncs(l: dg(string) void*) bool
@@ -63,6 +96,10 @@ fn loadFuncs(l: dg(string) void*) bool
 	eglCreatePlatformWindowSurface = cast(typeof(eglCreatePlatformWindowSurface))eglGetProcAddress("eglCreatePlatformWindowSurface");
 	eglCreatePlatformPixmapSurface = cast(typeof(eglCreatePlatformPixmapSurface))eglGetProcAddress("eglCreatePlatformPixmapSurface");
 	eglWaitSync = cast(typeof(eglWaitSync))eglGetProcAddress("eglWaitSync");
+
+	eglGetPlatformDisplayEXT = cast(typeof(eglGetPlatformDisplayEXT))eglGetProcAddress("eglGetPlatformDisplayEXT");
+	eglCreatePlatformWindowSurfaceEXT = cast(typeof(eglCreatePlatformWindowSurfaceEXT))eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
+	eglCreatePlatformPixmapSurfaceEXT = cast(typeof(eglCreatePlatformPixmapSurfaceEXT))eglGetProcAddress("eglCreatePlatformPixmapSurfaceEXT");
 
 	return eglGetProcAddress !is null && eglWaitSync !is null;
 }

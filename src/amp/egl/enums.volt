@@ -1,4 +1,4 @@
-// Copyright 2017-2019, The Khronos Group Inc.
+// Copyright 2017-2021, The Khronos Group Inc.
 // SPDX-License-Identifier: Apache-2.0
 /*!
  * @brief EGL enuns and values.
@@ -212,3 +212,13 @@ enum EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR : i32           = 0x00000004;
 enum EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR : i32            = 0x00000001;
 enum EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR : i32   = 0x00000002;
 enum EGL_OPENGL_ES3_BIT_KHR : i32                             = 0x00000040;
+
+
+// EGL_KHR_no_config_context
+
+enum EGL_NO_CONFIG_KHR : EGLConfig                            = null;
+
+
+// MESA_platform_surfaceless
+
+enum EGL_PLATFORM_SURFACELESS_MESA : i32                      = 0x31DD;

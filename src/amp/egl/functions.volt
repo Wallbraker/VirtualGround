@@ -1,4 +1,4 @@
-// Copyright 2017-2019, The Khronos Group Inc.
+// Copyright 2017-2021, The Khronos Group Inc.
 // SPDX-License-Identifier: Apache-2.0
 /*!
  * @brief EGL functions.
@@ -73,3 +73,10 @@ fn eglGetPlatformDisplay(platform: EGLenum, native_display: void*, attrib_list: 
 fn eglCreatePlatformWindowSurface(dpy: EGLDisplay, config: EGLConfig, native_window: void*, attrib_list: const(EGLAttrib)*) EGLSurface;
 fn eglCreatePlatformPixmapSurface(dpy: EGLDisplay, config: EGLConfig, native_pixmap: void*, attrib_list: const(EGLAttrib)*) EGLSurface;
 fn eglWaitSync(dpy: EGLDisplay, sync: EGLSync, flags: EGLint) EGLBoolean;
+
+
+// EGL_EXT_platform_base
+
+fn eglGetPlatformDisplayEXT(platform: EGLenum, native_display: void*, attrib_list: const EGLint*) EGLDisplay;
+fn eglCreatePlatformWindowSurfaceEXT(dpy: EGLDisplay, config: EGLConfig, native_window: void*, attrib_list: const EGLint*) EGLSurface;
+fn eglCreatePlatformPixmapSurfaceEXT(dpy: EGLDisplay, config: EGLConfig, native_pixmap: void*, attrib_list: const EGLint*) EGLSurface;
