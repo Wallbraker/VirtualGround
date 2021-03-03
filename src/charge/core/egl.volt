@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2021, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
  * @brief  Chunk of code that creates a EGL display and GL context.
@@ -45,10 +45,27 @@ fn initEGL(ref egl: EGL) bool
 		return false;
 	}
 
-	egl.dpy = eglGetDisplay(null);
-	if (egl.dpy is null) {
-		egl.log("Could not create EGLDisplay!");
-		return false;
+	if (!loadClientExtensions()) {
+		egl.log("Failed to load client extensions!");
+	}
+
+	if (EGL_MESA_platform_surfaceless) {
+		egl.dpy = eglGetPlatformDisplayEXT(
+			EGL_PLATFORM_SURFACELESS_MESA,
+			EGL_DEFAULT_DISPLAY,
+			null);
+		if (egl.dpy is null) {
+			egl.log("Could not create EGLDisplay (eglGetPlatformDisplayEXT)!");
+			return false;
+		}
+	}
+
+	if (egl.dpy is EGL_NO_DISPLAY) {
+		egl.dpy = eglGetDisplay(null);
+		if (egl.dpy is null) {
+			egl.log("Could not create EGLDisplay (eglGetDisplay)!");
+			return false;
+		}
 	}
 
 	if (!eglInitialize(egl.dpy, null, null)) {
@@ -56,9 +73,16 @@ fn initEGL(ref egl: EGL) bool
 		return false;	
 	}
 
+	if (!loadExtensions(egl.dpy)) {
+		egl.log("Could not load display extensions!");
+		return false;
+	}
+
 	attr: const(EGLint)[] = [
 		EGL_RENDERABLE_TYPE,
 		EGL_OPENGL_BIT,
+		EGL_SURFACE_TYPE,
+		0, // We do not need any windows so clear that bit.
 		EGL_NONE,
 	];
 
@@ -72,8 +96,8 @@ fn initEGL(ref egl: EGL) bool
 		return false;
 	}
 
-	if (num_config < 1) {
-		egl.log("We didn't get any config!");
+	if (num_config < 1 && !EGL_KHR_no_config_context) {
+		egl.log("We didn't get any config and don't support EGL_KHR_no_config_context!");
 		return false;
 	}
 
