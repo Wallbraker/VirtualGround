@@ -398,8 +398,6 @@ public:
 		glDisable(GL_DEPTH_TEST);
 
 		gfx.glCheckError();
-		glFlush();
-		gfx.glCheckError();
 	}
 
 	fn drawSquare(ref vp: math.Matrix4x4d)
