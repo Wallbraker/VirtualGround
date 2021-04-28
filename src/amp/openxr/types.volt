@@ -1,4 +1,4 @@
-// Copyright 2017-2019, The Khronos Group Inc.
+// Copyright 2017-2021, The Khronos Group Inc.
 // SPDX-License-Identifier: Apache-2.0
 /*!
  * @brief OpenXR types.
@@ -629,6 +629,19 @@ struct XrColor4f
 	g: f32;
 	b: f32;
 	a: f32;
+}
+
+
+// XR_KHR_composition_layer_depth
+
+struct XrCompositionLayerDepthInfoKHR {
+	type: XrStructureType;
+	next: const(void)*;
+	subImage: XrSwapchainSubImage;
+	minDepth: float;
+	maxDepth: float;
+	nearZ: float;
+	farZ: float;
 }
 
 
