@@ -1,4 +1,4 @@
-// Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2018-2021, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @brief  OpenXR integration.
@@ -32,6 +32,7 @@ enum Mode
 
 struct Extentions
 {
+	XR_KHR_composition_layer_depth: bool;
 	XR_KHR_convert_timespec_time: bool;
 	XR_KHR_opengl_enable: bool;
 	XR_MND_headless: bool;
@@ -88,12 +89,19 @@ struct View
 {
 	width, height: uint;
 
-	swapchain: XrSwapchain;
+	static struct Swapchains
+	{
+		texture: XrSwapchain;
+		depth: XrSwapchain;
+	}
+
+	swapchains: Swapchains;
 
 	location: XrView;
 
 	current_index: u32;
 	textures: GLuint[];
+	depths: GLuint[];
 	depth: GLuint;
 	targets: gfx.Target[];
 }

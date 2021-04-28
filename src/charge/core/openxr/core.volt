@@ -1,4 +1,4 @@
-// Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2018-2021, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @brief  Core using EGL and OpenXR to show content.
@@ -338,6 +338,9 @@ fn findExtensions(ref oxr: OpenXR) bool
 	foreach (ref ext; extProps) {
 		name := watt.toString(ext.extensionName.ptr);
 		switch (name) {
+		case "XR_KHR_composition_layer_depth":
+			oxr.have.XR_KHR_composition_layer_depth = true;
+			break;
 		case "XR_KHR_convert_timespec_time":
 			oxr.have.XR_KHR_convert_timespec_time = true;
 			break;
@@ -506,6 +509,11 @@ fn createInstanceEGL(ref oxr: OpenXR, mode: Mode) bool
 		"XR_MNDX_egl_enable".ptr,
 	];
 
+	depth: bool = oxr.have.XR_KHR_composition_layer_depth;
+	if (depth) {
+		exts ~= "XR_KHR_composition_layer_depth".ptr;
+	}
+
 	overlay: bool = oxr.have.XR_EXTX_overlay && mode == Mode.Overlay;
 	if (overlay) {
 		exts ~= "XR_EXTX_overlay".ptr;
@@ -527,6 +535,7 @@ fn createInstanceEGL(ref oxr: OpenXR, mode: Mode) bool
 		return false;
 	}
 
+	oxr.enabled.XR_KHR_composition_layer_depth = depth;
 	oxr.enabled.XR_KHR_convert_timespec_time = true;
 	oxr.enabled.XR_KHR_opengl_enable = true;
 	oxr.enabled.XR_MND_headless = true;
@@ -646,25 +655,42 @@ fn createViewsGL(ref oxr: OpenXR) bool
 		swapchainCreateInfo.sampleCount = 1;
 		swapchainCreateInfo.usageFlags = XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 
-		ret = xrCreateSwapchain(oxr.session, &swapchainCreateInfo, &view.swapchain);
+		ret = xrCreateSwapchain(oxr.session, &swapchainCreateInfo, &view.swapchains.texture);
 		if (ret != XR_SUCCESS) {
 			oxr.log("xrCreateSwapchain failed!");
 			return false;
 		}
 
-		ret = enumSwapchainImages(ref oxr, view.swapchain, out view.textures);
+		ret = enumSwapchainImages(ref oxr, view.swapchains.texture, out view.textures);
 		if (ret != XR_SUCCESS) {
 			oxr.log("xrCreateSwapchain failed!");
 			return false;
 		}
 
-		glGenTextures(1, &view.depth);
-		glBindTexture(GL_TEXTURE_2D, view.depth);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, cast(GLsizei)view.width, cast(GLsizei)view.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, null);
+		if (oxr.enabled.XR_KHR_composition_layer_depth) {
+			swapchainCreateInfo.format = GL_DEPTH_COMPONENT32F;
+			swapchainCreateInfo.usageFlags = XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XrSwapchainUsageFlags.XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+			ret = xrCreateSwapchain(oxr.session, &swapchainCreateInfo, &view.swapchains.depth);
+			if (ret != XR_SUCCESS) {
+				oxr.log("xrCreateSwapchain failed!");
+				return false;
+			}
+
+			ret = enumSwapchainImages(ref oxr, view.swapchains.depth, out view.depths);
+			if (ret != XR_SUCCESS) {
+				oxr.log("xrCreateSwapchain failed!");
+				return false;
+			}
+		} else {
+			glGenTextures(1, &view.depth);
+			glBindTexture(GL_TEXTURE_2D, view.depth);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, cast(GLsizei)view.width, cast(GLsizei)view.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, null);
+		}
 
 		view.targets = new gfx.Target[](view.textures.length);
 		foreach (k, ref target; view.targets) {
@@ -672,7 +698,11 @@ fn createViewsGL(ref oxr: OpenXR) bool
 			glGenFramebuffers(1, &fbo);
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, view.textures[k], 0);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, view.depth, 0);
+			if (oxr.enabled.XR_KHR_composition_layer_depth) {
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, view.depths[k], 0);
+			} else {
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, view.depth, 0);
+			}
 			name := new "openxr/view/${i}/${k}";
 			target = gfx.ExtTarget.make(name, fbo, view.width, view.height);
 		}
@@ -769,13 +799,17 @@ fn oneLoop(ref oxr: OpenXR,
 
 		gfx.glCheckError();
 
-		xrReleaseSwapchainImage(view.swapchain, &releaseInfo);
+		xrReleaseSwapchainImage(view.swapchains.texture, &releaseInfo);
+		if (view.swapchains.depth) {
+			xrReleaseSwapchainImage(view.swapchains.depth, &releaseInfo);
+		}
+
 		view.current_index = 0xffff_ffff_u32;
 
 		layerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
 		layerViews[i].pose = view.location.pose;
 		layerViews[i].fov = view.location.fov;
-		layerViews[i].subImage.swapchain = view.swapchain;
+		layerViews[i].subImage.swapchain = view.swapchains.texture;
 		layerViews[i].subImage.imageRect.offset.x = 0;
 		layerViews[i].subImage.imageRect.offset.y = 0;
 		layerViews[i].subImage.imageRect.extent.width = cast(i32)view.width;
@@ -852,19 +886,35 @@ fn acquireAndWaitViewImage(ref oxr: OpenXR, ref view: View) XrResult
 
 	acquireInfo: XrSwapchainImageAcquireInfo;
 	acquireInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
-	ret = xrAcquireSwapchainImage(view.swapchain, &acquireInfo, &view.current_index);
+	ret = xrAcquireSwapchainImage(view.swapchains.texture, &acquireInfo, &view.current_index);
 	if (ret != XR_SUCCESS) {
-		oxr.log("xrAcquireSwapchainImage failed!");
+		oxr.log("xrAcquireSwapchainImage.texture failed!");
 		return ret;
+	}
+
+	if (view.swapchains.depth) {
+		ret = xrAcquireSwapchainImage(view.swapchains.depth, &acquireInfo, &view.current_index);
+		if (ret != XR_SUCCESS) {
+			oxr.log("xrAcquireSwapchainImage.depth failed!");
+			return ret;
+		}
 	}
 
 	waitInfo: XrSwapchainImageWaitInfo;
 	waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;
 	waitInfo.timeout = XR_INFINITE_DURATION;
-	ret = xrWaitSwapchainImage(view.swapchain, &waitInfo);
+	ret = xrWaitSwapchainImage(view.swapchains.texture, &waitInfo);
 	if (ret != XR_SUCCESS) {
-		oxr.log("xrWaitSwapchainImage failed!");
+		oxr.log("xrWaitSwapchainImage.texture failed!");
 		return ret;
+	}
+
+	if (view.swapchains.depth) {
+		ret = xrWaitSwapchainImage(view.swapchains.depth, &waitInfo);
+		if (ret != XR_SUCCESS) {
+			oxr.log("xrWaitSwapchainImage.depth failed!");
+			return ret;
+		}
 	}
 
 	return XR_SUCCESS;
