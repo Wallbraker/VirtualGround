@@ -775,6 +775,7 @@ fn oneLoop(ref oxr: OpenXR,
 	releaseInfo: XrSwapchainImageReleaseInfo;
 	releaseInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
 
+	depthViews: XrCompositionLayerDepthInfoKHR[2];
 	layerViews: XrCompositionLayerProjectionView[2];
 
 	// This is where we render each view.
@@ -814,6 +815,22 @@ fn oneLoop(ref oxr: OpenXR,
 		layerViews[i].subImage.imageRect.offset.y = 0;
 		layerViews[i].subImage.imageRect.extent.width = cast(i32)view.width;
 		layerViews[i].subImage.imageRect.extent.height = cast(i32)view.height;
+
+		if (view.swapchains.depth is null) {
+			continue;
+		}
+
+		layerViews[i].next = cast(void*)&depthViews[i];
+		depthViews[i].type = XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR;
+		depthViews[i].subImage.swapchain = view.swapchains.depth;
+		depthViews[i].subImage.imageRect.offset.x = 0;
+		depthViews[i].subImage.imageRect.offset.y = 0;
+		depthViews[i].subImage.imageRect.extent.width = cast(i32)view.width;
+		depthViews[i].subImage.imageRect.extent.height = cast(i32)view.height;
+		depthViews[i].minDepth = 0.0f;
+		depthViews[i].maxDepth = 1.0f;
+		depthViews[i].nearZ = 0.05f; // Hardcoded
+		depthViews[i].farZ = 256.0;  // Hardcoded
 	}
 
 	gfx.glCheckError();
