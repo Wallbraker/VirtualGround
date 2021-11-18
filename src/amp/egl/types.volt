@@ -36,3 +36,8 @@ alias EGLSync = void*;
 alias EGLAttrib = intptr_t;
 alias EGLTime = u64;
 alias EGLImage = void*;
+
+
+// EGL_EXT_device_base
+
+alias EGLDeviceEXT = void*;

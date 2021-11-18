@@ -11,6 +11,10 @@ import amp.egl.types;
 // Client extensions
 global EGL_EXT_client_extensions: bool;
 global EGL_EXT_platform_base: bool;
+global EGL_EXT_platform_device: bool;
+global EGL_EXT_device_base: bool;
+global EGL_EXT_device_query: bool;
+global EGL_EXT_device_enumeration: bool;
 global EGL_MESA_platform_surfaceless: bool;
 
 

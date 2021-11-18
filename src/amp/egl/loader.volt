@@ -29,6 +29,10 @@ fn loadClientExtensions() bool
 	str := watt.toString(c_str);
 	EGL_EXT_client_extensions = str.indexOf("EGL_EXT_client_extensions") >= 0;
 	EGL_EXT_platform_base = str.indexOf("EGL_EXT_platform_base") >= 0;
+	EGL_EXT_platform_device = str.indexOf("EGL_EXT_platform_device") >= 0;
+	EGL_EXT_device_base = str.indexOf("EGL_EXT_device_base") >= 0;
+	EGL_EXT_device_query = str.indexOf("EGL_EXT_device_query") >= 0;
+	EGL_EXT_device_enumeration = str.indexOf("EGL_EXT_device_enumeration") >= 0;
 	EGL_MESA_platform_surfaceless = str.indexOf("EGL_MESA_platform_surfaceless") >= 0;
 
 	return true;
@@ -100,6 +104,11 @@ fn loadFuncs(l: dg(string) void*) bool
 	eglGetPlatformDisplayEXT = cast(typeof(eglGetPlatformDisplayEXT))eglGetProcAddress("eglGetPlatformDisplayEXT");
 	eglCreatePlatformWindowSurfaceEXT = cast(typeof(eglCreatePlatformWindowSurfaceEXT))eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
 	eglCreatePlatformPixmapSurfaceEXT = cast(typeof(eglCreatePlatformPixmapSurfaceEXT))eglGetProcAddress("eglCreatePlatformPixmapSurfaceEXT");
+
+	eglQueryDeviceAttribEXT = cast(typeof(eglQueryDeviceAttribEXT))eglGetProcAddress("eglQueryDeviceAttribEXT");
+	eglQueryDeviceStringEXT = cast(typeof(eglQueryDeviceStringEXT))eglGetProcAddress("eglQueryDeviceStringEXT");
+	eglQueryDevicesEXT = cast(typeof(eglQueryDevicesEXT))eglGetProcAddress("eglQueryDevicesEXT");
+	eglQueryDisplayAttribEXT = cast(typeof(eglQueryDisplayAttribEXT))eglGetProcAddress("eglQueryDisplayAttribEXT");
 
 	return eglGetProcAddress !is null && eglWaitSync !is null;
 }

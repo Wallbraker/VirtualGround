@@ -219,6 +219,18 @@ enum EGL_OPENGL_ES3_BIT_KHR : i32                             = 0x00000040;
 enum EGL_NO_CONFIG_KHR : EGLConfig                            = null;
 
 
+// EGL_EXT_device_base
+
+enum EGL_NO_DEVICE_EXT : EGLDeviceEXT                         = null;
+enum EGL_BAD_DEVICE_EXT : i32                                 = 0x322B;
+enum EGL_DEVICE_EXT : i32                                     = 0x322C;
+
+
+// EGL_EXT_platform_device
+
+enum EGL_PLATFORM_DEVICE_EXT : i32                            = 0x313F;
+
+
 // MESA_platform_surfaceless
 
 enum EGL_PLATFORM_SURFACELESS_MESA : i32                      = 0x31DD;

@@ -80,3 +80,11 @@ fn eglWaitSync(dpy: EGLDisplay, sync: EGLSync, flags: EGLint) EGLBoolean;
 fn eglGetPlatformDisplayEXT(platform: EGLenum, native_display: void*, attrib_list: const EGLint*) EGLDisplay;
 fn eglCreatePlatformWindowSurfaceEXT(dpy: EGLDisplay, config: EGLConfig, native_window: void*, attrib_list: const EGLint*) EGLSurface;
 fn eglCreatePlatformPixmapSurfaceEXT(dpy: EGLDisplay, config: EGLConfig, native_pixmap: void*, attrib_list: const EGLint*) EGLSurface;
+
+
+// EGL_EXT_device_base
+
+fn eglQueryDeviceAttribEXT(device: EGLDeviceEXT, attribute: EGLint, value: EGLAttrib*) EGLBoolean;
+fn eglQueryDeviceStringEXT(device: EGLDeviceEXT, name: EGLint) const(char)*;
+fn eglQueryDevicesEXT(max_devices: EGLint, devices: EGLDeviceEXT*, num_devices: EGLint*) EGLBoolean;
+fn eglQueryDisplayAttribEXT(dpy: EGLDisplay, attribute: EGLint, value: EGLAttrib*) EGLBoolean;
