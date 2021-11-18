@@ -49,13 +49,30 @@ fn initEGL(ref egl: EGL) bool
 		egl.log("Failed to load client extensions!");
 	}
 
-	if (EGL_MESA_platform_surfaceless) {
+	if (egl.dpy is EGL_NO_DISPLAY && EGL_EXT_device_base) {
+		devs: EGLDeviceEXT[1];
+		num_devices: EGLint;
+
+		// We only grab the first one.
+		eglQueryDevicesEXT(1, devs.ptr, &num_devices);
+
+		egl.dpy = eglGetPlatformDisplayEXT(
+			EGL_PLATFORM_DEVICE_EXT,
+			devs[0],
+			null);
+		if (egl.dpy is null) {
+			egl.log("Could not create EGLDisplay (EGL_PLATFORM_DEVICE_EXT)!");
+			return false;
+		}
+	}
+
+	if (egl.dpy is EGL_NO_DISPLAY && EGL_MESA_platform_surfaceless) {
 		egl.dpy = eglGetPlatformDisplayEXT(
 			EGL_PLATFORM_SURFACELESS_MESA,
 			EGL_DEFAULT_DISPLAY,
 			null);
 		if (egl.dpy is null) {
-			egl.log("Could not create EGLDisplay (eglGetPlatformDisplayEXT)!");
+			egl.log("Could not create EGLDisplay (EGL_PLATFORM_SURFACELESS_MESA)!");
 			return false;
 		}
 	}
