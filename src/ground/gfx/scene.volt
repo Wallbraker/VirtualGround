@@ -35,6 +35,7 @@ import charge.core.openxr.enumerate;
 
 global gGroundObj: VoxelObject;
 global gPsMvBall: VoxelObject[2];
+global gStaticModels: VoxelObject[2];
 global gPsMvComplete: VoxelObject[2];
 global gPsMvControllerOnly: VoxelObject[2];
 global gAxis: VoxelObject[16];
@@ -153,6 +154,29 @@ fn setupPsMvs()
 	reference(ref ballBuf, null);
 	reference(ref noBallBuf, null);
 	reference(ref completeBuf, null);
+}
+
+fn setupVoxModels()
+{
+	m: VoxelBuffer[2];
+	m[0] = loadModel("model/01", import("kluchek-vox-models/#street/#street_scene.vox"));
+	m[1] = loadModel("model/02", import("kluchek-vox-models/#treehouse/#treehouse.vox"));
+
+	pos: f32 = -cast(f32)(gStaticModels.length / 2);
+	foreach (i, ref obj; gStaticModels) {
+		obj.pos = math.Point3f.opCall(pos, 0.5f, -1.0f);
+		obj.rot = math.Quatf.opCall(0.0f, 0.0f, 1.0f, 0.0f);
+		obj.rot.normalize();
+		obj.scale = math.Vector3f.opCall(0.02f, 0.02f, 0.02f);
+		obj.origin = math.Point3f.opCall(0.f, 0.f, 0.f);
+		obj.active = true;
+		reference(ref obj.buf, m[i % m.length]);
+		pos += 3.0f;
+	}
+
+	foreach (ref buf; m) {
+		reference(ref buf, null);
+	}
 }
 
 fn setupChunk()
@@ -304,6 +328,7 @@ public:
 		setupGround();
 		setupPsMvs();
 		setupChunk();
+		setupVoxModels();
 
 		b := new gfx.SimpleVertexBuilder(6);
 		b.add(fX,  0.0f, fZ,   0.0f,  0.0f);
@@ -337,6 +362,9 @@ public:
 		}
 		foreach (ref chunk; gChunks) {
 			chunk.close();
+		}
+		foreach (ref staticModel; gStaticModels) {
+			staticModel.close();
 		}
 
 		gfx.reference(ref texLogo, null);
@@ -383,6 +411,9 @@ public:
 		}
 		foreach (ref axis; gAxis) {
 			if (axis.active) { objs[count++] = &axis; }
+		}
+		foreach (ref staticModel; gStaticModels) {
+			if (staticModel.active) { objs[count++] = &staticModel; }
 		}
 		if (!gOpenXR.enabled.XR_EXTX_overlay) {
 			foreach (ref chunk; gChunks) {
