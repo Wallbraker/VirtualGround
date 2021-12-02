@@ -1,3 +1,6 @@
 [submodule "res/pp"]
 	path = res/pp
 	url = https://github.com/Wallbraker/PixelPerfection
+[submodule "res/kluchek-vox-models"]
+	path = res/kluchek-vox-models
+	url = https://github.com/kluchek/vox-models
