@@ -248,7 +248,7 @@ fn setupQuad()
 
 	q := &gOpenXR.quadHack;
 	q.create(ref gOpenXR, width, height);
-	q.active = true;
+	q.active = false; // Start off inactive.
 
 	waitInfo: XrSwapchainImageWaitInfo;
 	waitInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO;

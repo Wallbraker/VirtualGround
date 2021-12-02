@@ -67,6 +67,7 @@ fn updateVoxelObject(ref obj: VoxelObject, ref loc: XrSpaceLocation)
 
 fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predictedDisplayTime: XrTime) bool
 {
+	shouldShowQuad: bool = false;
 	activeActionSet: XrActiveActionSet[2] = [
 		{ gameplay.set, XR_NULL_PATH },
 		{ move.set, XR_NULL_PATH },
@@ -91,6 +92,13 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	if (boolValue.isActive && boolValue.currentState) {
 		gOpenXR.log("Quit!");
 		return false;
+	}
+
+	getInfo.action = gameplay.grab;
+	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
+	if (boolValue.isActive && boolValue.currentState) {
+		gOpenXR.log("Grab!");
+		shouldShowQuad = true;
 	}
 
 	getInfo.action = move.triangle;
@@ -177,6 +185,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 
 		gOpenXR.quadHack.pose.orientation = *cast(XrQuaternionf*) &gPsMvControllerOnly[hand].rot;
 		gOpenXR.quadHack.pose.position = *cast(XrVector3f*) &gPsMvControllerOnly[hand].pos;
+		gOpenXR.quadHack.active = shouldShowQuad;
 	}
 
 	if (!gOpenXR.headless) {
@@ -315,7 +324,7 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 	actionSetInfo.localizedActionSetName[] = "Move Controller";
 	xrCreateActionSet(gOpenXR.instance, &actionSetInfo, &move.set);
 
-	createFloat(gameplay.set, handSubactionPaths, "grab_object", "Grab Object", ref gameplay.grab);
+	createBoolean(gameplay.set, handSubactionPaths, "grab_object", "Grab Object", ref gameplay.grab);
 	createBoolean(gameplay.set, handSubactionPaths, "quit_session", "Quit Session", ref gameplay.quit);
 	createPose(gameplay.set, handSubactionPaths, "aim", "Aim Pose", ref gameplay.aimPose);
 	createPose(gameplay.set, handSubactionPaths, "grip", "Grip Pose", ref gameplay.gripPose);
@@ -353,6 +362,8 @@ fn createActions(ref move: MoveActions, ref gameplay: GameplayActions) bool
 		bindings: XrActionSuggestedBinding[] = [
 			{gameplay.quit, menuClickPath[Side.Left]},
 			{gameplay.quit, menuClickPath[Side.Right]},
+			{gameplay.grab, triggerValuePath[Side.Left]},
+			{gameplay.grab, triggerValuePath[Side.Right]},
 			{gameplay.aimPose, aimPosePath[Side.Left]},
 			{gameplay.aimPose, aimPosePath[Side.Right]},
 			{gameplay.gripPose, gripPosePath[Side.Left]},
