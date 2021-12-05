@@ -384,7 +384,7 @@ public:
 		vp: math.Matrix4x4d;
 		vp.setToMultiply(ref proj, ref view);
 
-		if (gOpenXR.enabled.XR_EXTX_overlay) {
+		if (gOpenXR.overlay) {
 			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		} else {
 			glClearColor(0.6f, 0.6f, 1.0f, 1.0f);
@@ -415,7 +415,7 @@ public:
 		foreach (ref staticModel; gStaticModels) {
 			if (staticModel.active) { objs[count++] = &staticModel; }
 		}
-		if (!gOpenXR.enabled.XR_EXTX_overlay) {
+		if (!gOpenXR.overlay) {
 			foreach (ref chunk; gChunks) {
 				if (chunk.active) { objs[count++] = &chunk; }
 			}

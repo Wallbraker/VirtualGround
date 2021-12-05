@@ -79,7 +79,7 @@ public:
 			break;
 		case Mode.Headless:
 
-			if (!initOpenXRHeadless(ref gOpenXR)) {
+			if (!initOpenXRHeadless(ref gOpenXR, mode)) {
 				panic("Failed to init OpenXR");
 			}
 
@@ -272,17 +272,21 @@ class KeyboardOpenXR : ctl.Keyboard
 
 fn initOpenXRAndEGL(ref oxr: OpenXR, ref egl: egl.EGL, mode: Mode) bool
 {
+	gOpenXR.mode = mode;
+
 	return oxr.setupLoader() &&
 	       oxr.findExtensions() &&
-	       oxr.createInstanceEGL(mode) &&
+	       oxr.createInstanceEGL() &&
 	       .egl.initEGL(ref egl) &&
 	       oxr.createSessionEGL(ref egl) &&
 	       oxr.createViewsGL() &&
 	       oxr.startSession();
 }
 
-fn initOpenXRHeadless(ref oxr: OpenXR) bool
+fn initOpenXRHeadless(ref oxr: OpenXR, mode: Mode) bool
 {
+	gOpenXR.mode = mode;
+
 	return oxr.setupLoader() &&
 	       oxr.findExtensions() &&
 	       oxr.createInstanceHeadless() &&
@@ -416,9 +420,6 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
 
-	// Make that we are headless.
-	oxr.headless = true;
-
 	return true;
 }
 
@@ -489,7 +490,7 @@ fn createViewsHeadless(ref oxr: OpenXR) bool
 	return true;
 }
 
-fn createInstanceEGL(ref oxr: OpenXR, mode: Mode) bool
+fn createInstanceEGL(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
 
@@ -514,7 +515,7 @@ fn createInstanceEGL(ref oxr: OpenXR, mode: Mode) bool
 		exts ~= "XR_KHR_composition_layer_depth".ptr;
 	}
 
-	overlay: bool = oxr.have.XR_EXTX_overlay && mode == Mode.Overlay;
+	overlay: bool = oxr.have.XR_EXTX_overlay && oxr.mode == Mode.Overlay;
 	if (overlay) {
 		exts ~= "XR_EXTX_overlay".ptr;
 	}
@@ -543,9 +544,6 @@ fn createInstanceEGL(ref oxr: OpenXR, mode: Mode) bool
 
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
-
-	// We are not headless.
-	oxr.headless = false;
 
 	return true;
 }

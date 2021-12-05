@@ -51,8 +51,8 @@ struct OpenXR
 	//! Loaded loader library (not runtime).
 	lib: watt.Library;
 
-	//! We are not rendering to the device.
-	headless: bool;
+	//! Which mode are we in.
+	mode: Mode;
 
 	instance: XrInstance;
 	systemId: XrSystemId;
@@ -80,6 +80,11 @@ struct OpenXR
 	updateActions: dg(XrTime) bool;
 
 	quadHack: Quad;
+
+
+public:
+	@property fn overlay() bool { return mode == Mode.Overlay; }
+	@property fn headless() bool { return mode == Mode.Headless; }
 }
 
 /*!
