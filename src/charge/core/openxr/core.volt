@@ -63,6 +63,7 @@ public:
 
 		final switch (mode) {
 		case Mode.Normal:
+		case Mode.Ar:
 		case Mode.Overlay:
 			new InputOpenXR();
 

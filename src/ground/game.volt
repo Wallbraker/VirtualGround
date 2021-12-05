@@ -43,6 +43,7 @@ public:
 		mode := Mode.Normal;
 		switch (args.length >= 2 ? args[1] : "normal") {
 		case "normal": mode = Mode.Normal; break;
+		case "ar": mode = Mode.Ar; break;
 		case "overlay": mode = Mode.Overlay; break;
 		case "headless": mode = Mode.Headless; break;
 		default: mode = Mode.Normal; break;
@@ -53,6 +54,7 @@ public:
 			wfln("\t%s <mode>", args[0]);
 			wfln("");
 			wfln("\tnormal   - VR Mode");
+			wfln("\tar       - AR Mode");
 			wfln("\toverlay  - Overlay mode");
 			wfln("\theadless - Headless");
 			wfln("");

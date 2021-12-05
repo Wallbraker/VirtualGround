@@ -26,6 +26,7 @@ global gOpenXR: OpenXR;
 enum Mode
 {
 	Normal,
+	Ar,
 	Overlay,
 	Headless,
 }
@@ -83,6 +84,7 @@ struct OpenXR
 
 
 public:
+	@property fn ar() bool { return mode == Mode.Ar; }
 	@property fn overlay() bool { return mode == Mode.Overlay; }
 	@property fn headless() bool { return mode == Mode.Headless; }
 }
