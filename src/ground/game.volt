@@ -20,6 +20,9 @@ import charge.core.openxr.core : CoreOpenXR;
 import ground.gfx;
 import ground.actions;
 
+import io = watt.io;
+
+alias wfln = io.writefln;
 
 global gMoveActions: MoveActions;
 global gGameplayActions: GameplayActions;
@@ -43,6 +46,19 @@ public:
 		case "overlay": mode = Mode.Overlay; break;
 		case "headless": mode = Mode.Headless; break;
 		default: mode = Mode.Normal; break;
+		}
+
+		if (args.length == 1) {
+			wfln("Please provide a argument:");
+			wfln("\t%s <mode>", args[0]);
+			wfln("");
+			wfln("\tnormal   - VR Mode");
+			wfln("\toverlay  - Overlay mode");
+			wfln("\theadless - Headless");
+			wfln("");
+			super();
+			.core.get().quit(1);
+			return;
 		}
 
 		core := new CoreOpenXR(opts, mode);
