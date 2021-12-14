@@ -1,4 +1,4 @@
-// Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2018-2021, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
  * @brief  Main file, it all starts from here.
@@ -14,15 +14,12 @@ import ctl = charge.ctl;
 import math = charge.math;
 import scene = charge.game.scene;
 
-import charge.core.openxr : Mode, gOpenXR;
+public import charge.core.openxr : Mode;
+import charge.core.openxr : gOpenXR;
 import charge.core.openxr.core : CoreOpenXR;
 
 import ground.gfx;
 import ground.actions;
-
-import io = watt.io;
-
-alias wfln = io.writefln;
 
 global gMoveActions: MoveActions;
 global gGameplayActions: GameplayActions;
@@ -33,35 +30,12 @@ global gGameplayActions: GameplayActions;
 class Game : scene.ManagerApp
 {
 public:
-	this(args: string[])
+	this(mode: Mode)
 	{
 		// First init core.
 		opts := new .core.Options();
 		opts.width = 1920;
 		opts.height = 1080;
-
-		mode := Mode.Normal;
-		switch (args.length >= 2 ? args[1] : "normal") {
-		case "normal": mode = Mode.Normal; break;
-		case "ar": mode = Mode.Ar; break;
-		case "overlay": mode = Mode.Overlay; break;
-		case "headless": mode = Mode.Headless; break;
-		default: mode = Mode.Normal; break;
-		}
-
-		if (args.length == 1) {
-			wfln("Please provide a argument:");
-			wfln("\t%s <mode>", args[0]);
-			wfln("");
-			wfln("\tnormal   - VR Mode");
-			wfln("\tar       - AR Mode");
-			wfln("\toverlay  - Overlay mode");
-			wfln("\theadless - Headless");
-			wfln("");
-			super();
-			.core.get().quit(1);
-			return;
-		}
 
 		core := new CoreOpenXR(opts, mode);
 
