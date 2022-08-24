@@ -88,54 +88,57 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	boolValue: XrActionStateBoolean;
 	boolValue.type = XrStructureType.XR_TYPE_ACTION_STATE_BOOLEAN;
 
+	logMessage := gOpenXR.headless;
+
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.isActive && boolValue.currentState) {
-		gOpenXR.log("Quit!");
+		if (logMessage) { gOpenXR.log("Quit!"); }
 		return false;
 	}
+
 
 	getInfo.action = gameplay.grab;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.isActive && boolValue.currentState) {
-		gOpenXR.log("Grab!");
+		if (logMessage) { gOpenXR.log("Grab!"); }
 		shouldShowQuad = true;
 	}
 
 	getInfo.action = move.triangle;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
-		gOpenXR.log("Triangle");
+		if (logMessage) { gOpenXR.log("Triangle"); }
 		gOpenXR.log(new "Memory usage: ${sys.cMemoryUsage()}");
 	}
 
 	getInfo.action = move.circle;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
-		gOpenXR.log("Circle");
+		if (logMessage) { gOpenXR.log("Circle"); }
 	}
 
 	getInfo.action = move.cross;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
-		gOpenXR.log("Cross");
+		if (logMessage) { gOpenXR.log("Cross"); }
 	}
 
 	getInfo.action = move.square;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
-		gOpenXR.log("Square");
+		if (logMessage) { gOpenXR.log("Square"); }
 	}
 
 	getInfo.action = move.start;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
-		gOpenXR.log("Start");
+		if (logMessage) { gOpenXR.log("Start"); }
 	}
 
 	getInfo.action = move.select;
 	xrGetActionStateBoolean(gOpenXR.session, &getInfo, &boolValue);
 	if (boolValue.changedSinceLastSync && boolValue.currentState) {
-		gOpenXR.log("Select");
+		if (logMessage) { gOpenXR.log("Select"); }
 	}
 
 	spaceLocation: XrSpaceLocation;
