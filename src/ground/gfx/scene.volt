@@ -462,6 +462,7 @@ public:
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glColorMask(true, true, true, false);
 
 		foreach (obj; objs) {
 			if (obj.buf.numLineVertices == 0) {
@@ -481,6 +482,7 @@ public:
 			glDrawArrays(GL_LINES, 0, obj.buf.numLineVertices);
 		}
 
+		glColorMask(true, true, true, true);
 		glDisable(GL_BLEND);
 		glBindVertexArray(0);
 
