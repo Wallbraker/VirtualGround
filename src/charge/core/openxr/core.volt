@@ -743,10 +743,51 @@ fn oneLoop(ref oxr: OpenXR,
 	defTarget := gfx.DefaultTarget.opCall();
 	ret: XrResult;
 	predictedDisplayTime: XrTime;
+	shouldRender: bool;
 
-	ret = oxr.waitFrame(out predictedDisplayTime);
+
+	// Poll events to make the runtime transition to the correct state.
+	ret = oxr.pollEvents();
 	if (ret != XR_SUCCESS) {
 		// Already logged.
+		return false;
+	}
+
+	// This is the frame pacing.
+	ret = oxr.waitFrame(out predictedDisplayTime, out shouldRender);
+	if (ret != XR_SUCCESS) {
+		// Already logged.
+		return false;
+	}
+
+	// Grab the action state.
+	updateActionsDg(predictedDisplayTime);
+
+	// We shouldn't render.
+	if (!shouldRender) {
+		// Swapchains are now ready, signal that we are starting to render.
+		ret = xrBeginFrame(oxr.session, null);
+		if (ret != XR_SUCCESS) {
+			oxr.log("xrBeginFrame failed!");
+			return false;
+		}
+
+		endFrame: XrFrameEndInfo;
+		endFrame.type = XR_TYPE_FRAME_END_INFO;
+		endFrame.displayTime = predictedDisplayTime;
+		endFrame.environmentBlendMode = oxr.blendMode;
+		endFrame.layerCount = 0;
+		endFrame.layers = null;
+
+		xrEndFrame(oxr.session, &endFrame);
+
+		return true;
+	}
+
+	// Swapchains are now ready, signal that we are starting to render.
+	ret = xrBeginFrame(oxr.session, null);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrBeginFrame failed!");
 		return false;
 	}
 
@@ -755,19 +796,9 @@ fn oneLoop(ref oxr: OpenXR,
 		oxr.acquireAndWaitViewImage(ref view);
 	}
 
-	// Grab the action state.
-	updateActionsDg(predictedDisplayTime);
-
 	ret = oxr.getViewLocation(predictedDisplayTime);
 	if (ret != XR_SUCCESS) {
 		// Already logged.
-		return false;
-	}
-
-	// Swapchains are now ready, signal that we are starting to render.
-	ret = xrBeginFrame(oxr.session, null);
-	if (ret != XR_SUCCESS) {
-		oxr.log("xrBeginFrame failed!");
 		return false;
 	}
 
@@ -878,7 +909,29 @@ fn oneLoop(ref oxr: OpenXR,
 	return true;
 }
 
-fn waitFrame(ref oxr: OpenXR, out predictedDisplayTime: XrTime) XrResult
+fn pollEvents(ref oxr: OpenXR) XrResult
+{
+	eventData: XrEventDataBuffer;
+	ret: XrResult;
+
+	while (true) {
+		// Need to poll for events to transition the state.
+		ret = xrPollEvent(oxr.instance, &eventData);
+		if (ret == XR_EVENT_UNAVAILABLE) {
+			return XR_SUCCESS; // Return success
+		}
+
+
+		if (ret != XR_SUCCESS) {
+			oxr.log(new "xrPollEvent failed (${ret})");
+			return ret;
+		}
+
+		// Handle event.
+	}
+}
+
+fn waitFrame(ref oxr: OpenXR, out predictedDisplayTime: XrTime, out shouldRender: bool) XrResult
 {
 	ret: XrResult;
 
@@ -892,6 +945,7 @@ fn waitFrame(ref oxr: OpenXR, out predictedDisplayTime: XrTime) XrResult
 	}
 
 	predictedDisplayTime = frameState.predictedDisplayTime;
+	shouldRender = frameState.shouldRender == XR_TRUE;
 
 	return XR_SUCCESS;
 }
