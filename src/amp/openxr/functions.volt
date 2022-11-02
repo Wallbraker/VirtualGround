@@ -8,7 +8,13 @@ module amp.openxr.functions;
 import amp.openxr.enums;
 import amp.openxr.types;
 
-import core.c.posix.time : timespec;
+version (Posix) {
+	import core.c.posix.time : timespec;
+}
+
+version (Windows) {
+	import core.c.windows.windows : LARGE_INTEGER;
+}
 
 
 // Version 1.0
@@ -78,5 +84,12 @@ fn xrStopHapticFeedback(session: XrSession, hapticActionInfo: const XrHapticActi
 
 fn xrGetOpenGLGraphicsRequirementsKHR(instance: XrInstance, systemId: XrSystemId, graphicsRequirements: XrGraphicsRequirementsOpenGLKHR*) XrResult;
 
-fn xrConvertTimespecTimeToTimeKHR(instance: XrInstance, timespecTime: const(timespec)*, time: XrTime*) XrResult;
-fn xrConvertTimeToTimespecTimeKHR(instance: XrInstance, time: XrTime, timespecTime: timespec*) XrResult;
+version (Posix) {
+	fn xrConvertTimespecTimeToTimeKHR(instance: XrInstance, timespecTime: const(timespec)*, time: XrTime*) XrResult;
+	fn xrConvertTimeToTimespecTimeKHR(instance: XrInstance, time: XrTime, timespecTime: timespec*) XrResult;
+}
+
+version (Windows) {
+	fn xrConvertWin32PerformanceCounterToTimeKHR(instance: XrInstance, performanceCounter: const(LARGE_INTEGER)*, time: XrTime*) XrResult;
+	fn xrConvertTimeToWin32PerformanceCounterKHR(instance: XrInstance, time: XrTime, performanceCounter: LARGE_INTEGER*) XrResult;
+}

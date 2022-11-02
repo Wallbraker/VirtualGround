@@ -12,7 +12,13 @@ import watt = [watt.library];
 
 fn loadLoader() watt.Library
 {
-	return watt.Library.load("libopenxr_loader.so.1");
+	version (Linux) {
+		return watt.Library.load("libopenxr_loader.so.1");
+	} else version (Windows) {
+		return watt.Library.load("openxr_loader.dll");
+	} else {
+		return null;
+	}
 }
 
 fn loadRuntimeFuncs(l: dg(string) void*) bool
@@ -81,8 +87,15 @@ fn loadInstanceFunctions(instance: XrInstance) bool
 
 	xrGetInstanceProcAddr(instance, "xrGetOpenGLGraphicsRequirementsKHR".ptr, cast(PFN_xrVoidFunction*)&xrGetOpenGLGraphicsRequirementsKHR);
 
-	xrGetInstanceProcAddr(instance, "xrConvertTimespecTimeToTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimespecTimeToTimeKHR);
-	xrGetInstanceProcAddr(instance, "xrConvertTimeToTimespecTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimeToTimespecTimeKHR);
+	version (Posix) {
+		xrGetInstanceProcAddr(instance, "xrConvertTimespecTimeToTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimespecTimeToTimeKHR);
+		xrGetInstanceProcAddr(instance, "xrConvertTimeToTimespecTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimeToTimespecTimeKHR);
+	}
+
+	version (Windows) {
+		xrGetInstanceProcAddr(instance, "xrConvertWin32PerformanceCounterToTimeKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertWin32PerformanceCounterToTimeKHR);
+		xrGetInstanceProcAddr(instance, "xrConvertTimeToWin32PerformanceCounterKHR".ptr, cast(PFN_xrVoidFunction*)&xrConvertTimeToWin32PerformanceCounterKHR);
+	}
 
 	return true;
 }
