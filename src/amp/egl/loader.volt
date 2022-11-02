@@ -1,4 +1,4 @@
-// Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2019-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or Apache-2.0
 /*!
  * @brief  Loader functions.
@@ -16,7 +16,13 @@ import watt.text.string : indexOf;
 
 fn loadEGL() watt.Library
 {
-	return watt.Library.load("libEGL.so.1");
+	version (Linux) {
+		return watt.Library.load("libEGL.so.1");
+	} else version (Windows) {
+		return watt.Library.load("libEGL.dll");
+	} else {
+		return null;
+	}
 }
 
 fn loadClientExtensions() bool
