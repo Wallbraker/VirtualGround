@@ -9,7 +9,12 @@ module charge.core.openxr.core;
 import core.exception;
 import core.c.stdio : fprintf, fflush, stderr;
 import core.c.stdlib : exit;
-import core.c.posix.time : timespec, CLOCK_MONOTONIC, clock_gettime;
+version (Posix) {
+	import core.c.posix.time : timespec, CLOCK_MONOTONIC, clock_gettime;
+}
+version (Windows) {
+	import core.c.windows.windows : QueryPerformanceCounter, LARGE_INTEGER;
+}
 
 import watt = [watt.library, watt.conv];
 
@@ -215,11 +220,19 @@ private:
 
 	fn chainRender(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
-		ts: timespec;
 		time: XrTime;
 
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-		xrConvertTimespecTimeToTimeKHR(gOpenXR.instance, &ts, &time);
+		version (Posix) {
+			ts: timespec;
+
+			clock_gettime(CLOCK_MONOTONIC, &ts);
+			xrConvertTimespecTimeToTimeKHR(gOpenXR.instance, &ts, &time);
+		} else version (Windows) {
+			value: LARGE_INTEGER;
+
+			QueryPerformanceCounter(&value);
+			xrConvertWin32PerformanceCounterToTimeKHR(gOpenXR.instance, &value, &time);
+		}
 
 		updateActionsDg(time);
 
@@ -352,6 +365,9 @@ fn findExtensions(ref oxr: OpenXR) bool
 		case "XR_KHR_opengl_enable":
 			oxr.have.XR_KHR_opengl_enable = true;
 			break;
+		case "XR_KHR_win32_convert_performance_counter_time":
+			oxr.have.XR_KHR_win32_convert_performance_counter_time = true;
+			break;
 		case "XR_MND_headless":
 			oxr.have.XR_MND_headless = true;
 			break;
@@ -393,8 +409,23 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	exts: const(char)*[2] = [
+	version (Posix) if (!oxr.have.XR_KHR_convert_timespec_time) {
+		oxr.log("Doesn't have XR_KHR_convert_timespec_time! :(");
+		return false;
+	}
+
+	version (Windows) if (!oxr.have.XR_KHR_win32_convert_performance_counter_time) {
+		oxr.log("Doesn't have XR_KHR_win32_convert_performance_counter_time! :(");
+		return false;
+	}
+
+	version (Posix) exts: const(char)*[2] = [
 		"XR_KHR_convert_timespec_time".ptr,
+		"XR_MND_headless".ptr,
+	];
+
+	version (Windows) exts: const(char)*[2] = [
+		"XR_KHR_win32_convert_performance_counter_time".ptr,
 		"XR_MND_headless".ptr,
 	];
 

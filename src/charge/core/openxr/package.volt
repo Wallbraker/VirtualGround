@@ -36,6 +36,7 @@ struct Extentions
 	XR_KHR_composition_layer_depth: bool;
 	XR_KHR_convert_timespec_time: bool;
 	XR_KHR_opengl_enable: bool;
+	XR_KHR_win32_convert_performance_counter_time: bool;
 	XR_MND_headless: bool;
 	XR_MNDX_egl_enable: bool;
 	XR_EXTX_overlay: bool;
