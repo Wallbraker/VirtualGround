@@ -1,4 +1,4 @@
-// Copyright 2017-2021, The Khronos Group Inc.
+// Copyright 2017-2022, The Khronos Group Inc.
 // SPDX-License-Identifier: Apache-2.0
 /*!
  * @brief OpenXR types.
@@ -661,6 +661,16 @@ struct XrGraphicsBindingEGLMNDX
 
 
 // XR_KHR_opengl_enable || XR_MNDX_egl_enable
+
+version (Windows) import core.c.windows : HDC, HGLRC;
+
+version (Windows) struct XrGraphicsBindingOpenGLWin32KHR
+{
+	type: XrStructureType;
+	next: const(void)*;
+	hDC: HDC;
+	hGLRC: HGLRC;
+};
 
 struct XrSwapchainImageOpenGLKHR
 {
