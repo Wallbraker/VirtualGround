@@ -36,7 +36,7 @@ fn initEGL(ref egl: EGL) bool
 {
 	egl.lib = loadEGL();
 	if (egl.lib is null) {
-		egl.log("Failed to load EGL!");
+		egl.log("Failed to load EGL library!");
 		return false;
 	}
 
