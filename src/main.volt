@@ -1,4 +1,4 @@
-// Copyright 2018-2021, Collabora, Ltd.
+// Copyright 2018-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
  * @brief  Main file, it all starts from here.
@@ -27,6 +27,11 @@ fn printHelp(args: string[])
 
 fn parseArgs(args: string[], out mode: Mode) bool
 {
+	// Default to AR mode on Windows.
+	version (Windows) if (args.length == 1) {
+		args ~= "ar";
+	}
+
 	if (args.length == 1) {
 		wfln("error: Please provide a argument");
 		wfln("");
