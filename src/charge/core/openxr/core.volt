@@ -27,6 +27,7 @@ import amp.openxr.loader;
 import io = watt.io;
 
 import egl = charge.core.egl;
+import wgl = charge.core.wgl;
 import gfx = charge.gfx;
 import ctl = charge.ctl;
 import math = charge.math;
@@ -47,6 +48,7 @@ class CoreOpenXR : BasicCore
 {
 public:
 	egl: .egl.EGL;
+	version (Windows) wgl: .wgl.WGL;
 
 
 private:
@@ -61,6 +63,7 @@ public:
 
 		// Need to do this ASAP.
 		this.egl.log = doLog;
+		version (Windows) this.wgl.log = doLog;
 		gOpenXR.log = doLog;
 
 		gInstance = this;
@@ -72,7 +75,10 @@ public:
 		case Mode.Overlay:
 			new InputOpenXR();
 
-			if (!initOpenXRAndEGL(ref gOpenXR, ref this.egl, mode)) {
+			version (Windows) if (!initOpenXRAndWGL(ref gOpenXR, ref this.wgl, mode)) {
+				panic("Failed to init OpenXR or WGL");
+			}
+			version (Posix) if (!initOpenXRAndEGL(ref gOpenXR, ref this.egl, mode)) {
 				panic("Failed to init OpenXR or EGL");
 			}
 
@@ -194,6 +200,8 @@ private:
 
 	fn doUpdateActions(predictedDisplayTime: XrTime)
 	{
+		version (Windows) .wgl.pollEvents(ref wgl, ref mRunning);
+
 		updateActionsDg(predictedDisplayTime);
 	}
 
@@ -293,6 +301,20 @@ fn initOpenXRAndEGL(ref oxr: OpenXR, ref egl: egl.EGL, mode: Mode) bool
 	       oxr.createInstanceEGL() &&
 	       .egl.initEGL(ref egl) &&
 	       oxr.createSessionEGL(ref egl) &&
+	       oxr.createViewsGL() &&
+	       oxr.startSession();
+}
+
+
+version (Windows) fn initOpenXRAndWGL(ref oxr: OpenXR, ref wgl: wgl.WGL, mode: Mode) bool
+{
+	gOpenXR.mode = mode;
+
+	return oxr.setupLoader() &&
+	       oxr.findExtensions() &&
+	       oxr.createInstanceWGL() &&
+	       .wgl.initWGL(ref wgl) &&
+	       oxr.createSessionWGL(ref wgl) &&
 	       oxr.createViewsGL() &&
 	       oxr.startSession();
 }
@@ -621,6 +643,128 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 	eglInfo.config = egl.cfg;
 	eglInfo.context = egl.ctx;
 	next = cast(void*)&eglInfo;
+
+	overlayInfo: XrSessionCreateInfoOverlayEXTX;
+	overlayInfo.type = XR_TYPE_SESSION_CREATE_INFO_OVERLAY_EXTX;
+	overlayInfo.next = next;
+
+	if (oxr.enabled.XR_EXTX_overlay) {
+		next = cast(void*)&overlayInfo;
+	}
+
+	createInfo: XrSessionCreateInfo;
+	createInfo.type = XR_TYPE_SESSION_CREATE_INFO;
+	createInfo.next = next;
+	createInfo.systemId = oxr.systemId;
+	ret = xrCreateSession(oxr.instance, &createInfo, &oxr.session);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrCreateSession failed!");
+		return false;
+	}
+
+	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
+	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
+		return false;
+	}
+
+	return true;
+}
+
+version (Windows) fn createInstanceWGL(ref oxr: OpenXR) bool
+{
+	ret: XrResult;
+
+	if (!oxr.have.XR_KHR_opengl_enable) {
+		oxr.log("Doesn't have XR_KHR_opengl_enable! :(");
+		return false;
+	}
+
+	if (!oxr.have.XR_KHR_win32_convert_performance_counter_time) {
+		oxr.log("Doesn't have XR_KHR_win32_convert_performance_counter_time! :(");
+		return false;
+	}
+
+	exts: const(char)*[] = [
+		"XR_KHR_opengl_enable".ptr,
+		"XR_KHR_win32_convert_performance_counter_time".ptr,
+	];
+
+	depth: bool = oxr.have.XR_KHR_composition_layer_depth;
+	if (depth) {
+		exts ~= "XR_KHR_composition_layer_depth".ptr;
+	}
+
+	overlay: bool = oxr.have.XR_EXTX_overlay && oxr.mode == Mode.Overlay;
+	if (overlay) {
+		exts ~= "XR_EXTX_overlay".ptr;
+	}
+
+	createInfo: XrInstanceCreateInfo;
+	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.enabledExtensionCount = cast(u32)exts.length;
+	createInfo.enabledExtensionNames = exts.ptr;
+	createInfo.applicationInfo.applicationName[] = "CoreOpenXR";
+	createInfo.applicationInfo.applicationVersion = 1;
+	createInfo.applicationInfo.engineName[] = "Charge";
+	createInfo.applicationInfo.engineVersion = 1;
+	createInfo.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 3);
+
+	ret = xrCreateInstance(&createInfo, &oxr.instance);
+	if (ret != XR_SUCCESS) {
+		oxr.log("Failed to create instance");
+		return false;
+	}
+
+	oxr.enabled.XR_KHR_composition_layer_depth = depth;
+	oxr.enabled.XR_KHR_opengl_enable = true;
+	oxr.enabled.XR_KHR_win32_convert_performance_counter_time = true;
+	oxr.enabled.XR_EXTX_overlay = overlay;
+
+	// Also load functions for this instance.
+	loadInstanceFunctions(oxr.instance);
+
+	return true;
+}
+
+version (Windows) fn createSessionWGL(ref oxr: OpenXR, ref wgl: wgl.WGL) bool
+{
+	assert(!oxr.headless);
+
+	ret: XrResult;
+
+	getInfo: XrSystemGetInfo;
+	getInfo.type = XR_TYPE_SYSTEM_GET_INFO;
+	getInfo.formFactor = XrFormFactor.XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+
+	ret = xrGetSystem(oxr.instance, &getInfo, &oxr.systemId);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrGetSystem failed!");
+		return false;
+	}
+
+	// Spec requires that we call this function.
+	reqs: XrGraphicsRequirementsOpenGLKHR;
+	reqs.type = XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR;
+	xrGetOpenGLGraphicsRequirementsKHR(oxr.instance, oxr.systemId, &reqs);
+
+	// Hard coded for now.
+	oxr.viewConfigType = XrViewConfigurationType.XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+
+	envBlendModes: XrEnvironmentBlendMode[];
+	ret = enumEnvironmentBlendModes(ref oxr, oxr.viewConfigType, out envBlendModes);
+	if (ret != XR_SUCCESS || envBlendModes.length <= 0) {
+		return false;
+	}
+	oxr.blendMode = envBlendModes[0];
+
+	next: void*;
+
+	win32Info: XrGraphicsBindingOpenGLWin32KHR;
+	win32Info.type = XR_TYPE_GRAPHICS_BINDING_OPENGL_WIN32_KHR;
+	win32Info.next = null;
+	win32Info.hDC = wgl.hDC;
+	win32Info.hGLRC = wgl.hRC;
+	next = cast(void*)&win32Info;
 
 	overlayInfo: XrSessionCreateInfoOverlayEXTX;
 	overlayInfo.type = XR_TYPE_SESSION_CREATE_INFO_OVERLAY_EXTX;
