@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
  * @brief  Holds action related functions.
@@ -191,11 +191,16 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 		gOpenXR.quadHack.active = shouldShowQuad;
 	}
 
+	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
+	if (ret == XR_SUCCESS) {
+		gViewSpace.pos = *cast(math.Point3f*) &spaceLocation.pose.position;
+		gViewSpace.rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
+	}
+
 	if (!gOpenXR.headless) {
 		return true;
 	}
 
-	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
 	if (ret == XR_SUCCESS) {
 		gAxis[gOpenXR.views.length].active = true;
 		gAxis[gOpenXR.views.length].pos = *cast(math.Point3f*) &spaceLocation.pose.position;

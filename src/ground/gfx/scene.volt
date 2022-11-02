@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
  * @brief  A single scene that can be rendered from multiple views.
@@ -33,6 +33,13 @@ import charge.core.openxr;
 import charge.core.openxr.enumerate;
 
 
+struct Pose
+{
+	rot: math.Quatf;
+	pos: math.Point3f;
+};
+
+global gViewSpace: Pose;
 global gGroundObj: VoxelObject;
 global gPsMvBall: VoxelObject[2];
 global gStaticModels: VoxelObject[2];
