@@ -1,4 +1,4 @@
-// Copyright 2018-2021, Collabora, Ltd.
+// Copyright 2018-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @brief  OpenXR integration.
@@ -75,6 +75,8 @@ struct OpenXR
 
 	stageSpace: XrSpace;
 	viewSpace: XrSpace;
+
+	frameID: i64;
 
 	views: View[];
 

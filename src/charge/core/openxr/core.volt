@@ -1,4 +1,4 @@
-// Copyright 2018-2021, Collabora, Ltd.
+// Copyright 2018-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @brief  Core using EGL and OpenXR to show content.
@@ -943,6 +943,8 @@ fn waitFrame(ref oxr: OpenXR, out predictedDisplayTime: XrTime, out shouldRender
 		oxr.log("xrWaitFrame failed!");
 		return ret;
 	}
+
+	oxr.frameID += 1;
 
 	predictedDisplayTime = frameState.predictedDisplayTime;
 	shouldRender = frameState.shouldRender == XR_TRUE;
