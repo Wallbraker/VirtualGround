@@ -12,6 +12,7 @@ import core.c.stdio;
 import sys = charge.sys;
 import gfx = charge.gfx;
 import math = charge.math;
+import tui = charge.game.tui;
 
 import io = watt.io;
 
@@ -308,6 +309,10 @@ public:
 	texWhiteArray: gfx.Texture;
 	mSquareBuf: gfx.SimpleBuffer;
 
+	// Text rendering stuff.
+	mGrid : tui.Grid;
+	mGridScale: f32 = 0.005f;
+
 
 public:
 	this()
@@ -348,6 +353,10 @@ public:
 		gfx.destroy(ref b);
 
 		setupQuad();
+
+		mGrid = new tui.Grid(10, 3);
+
+		updateText("ZZZ");
 	}
 
 	fn close()
@@ -378,6 +387,15 @@ public:
 		gfx.reference(ref texWhite, null);
 		gfx.reference(ref texWhiteArray, null);
 		gfx.reference(ref mSquareBuf, null);
+
+		mGrid.close();
+		mGrid = null;
+	}
+
+	fn updateText(text: string)
+	{
+		mGrid.reset();
+		tui.makeButton(mGrid, 0, 0, 10, false, cast(immutable(u8)[])text);
 	}
 
 	fn renderView(target: gfx.Target, ref viewInfo: gfx.ViewInfo)
@@ -432,10 +450,24 @@ public:
 		drawVoxelLines(ref vp, objs[0 .. count]);
 
 		glLineWidth(1.0f);
+
+		drawText(target, ref vp);
+
 		glBindSampler(0, 0);
 		glDisable(GL_DEPTH_TEST);
 
 		gfx.glCheckError();
+	}
+
+	fn drawText(target: gfx.Target, ref vp: math.Matrix4x4d)
+	{
+		pos := gViewSpace.pos;
+		rot := gViewSpace.rot;
+
+		// Place it 1.5m in front of the view.
+		pos += rot * math.Vector3f.opCall(0.0f, 0.0f, -1.5f);
+
+		mGrid.draw(ref vp, ref pos, ref rot, mGridScale);
 	}
 
 	fn drawSquare(ref vp: math.Matrix4x4d)

@@ -1,4 +1,4 @@
-// Copyright 2018-2021, Collabora, Ltd.
+// Copyright 2018-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
 /*!
  * @brief  Main file, it all starts from here.
@@ -23,6 +23,7 @@ import ground.actions;
 
 global gMoveActions: MoveActions;
 global gGameplayActions: GameplayActions;
+
 
 /*!
  * Very small wrapper class to show the scene without OpenXR.
@@ -118,6 +119,8 @@ public:
 
 	override fn updateActions(predictedDisplayTime: i64)
 	{
+		s.updateText(new "${gOpenXR.frameID}");
+
 		if (!.updateActions(ref gMoveActions, ref gGameplayActions, predictedDisplayTime)) {
 			core.get().quit(0);
 		}
