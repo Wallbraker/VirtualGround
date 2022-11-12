@@ -15,6 +15,11 @@ import math = charge.math;
 import tui = charge.game.tui;
 
 import io = watt.io;
+import text = [
+	watt.text.sink,
+	core.rt.format,
+	];
+
 
 import watt.math;
 
@@ -283,6 +288,13 @@ fn setupQuad()
 	q.size.height = 1.0f;
 }
 
+fn prettyF32(f: f32) string
+{
+	s: text.StringSink;
+	text.vrt_format_f32(s.sink, f, 3, true);
+	return s.toString();
+}
+
 struct VoxelObject
 {
 public:
@@ -304,6 +316,9 @@ public:
 class Scene
 {
 public:
+	enum GLYPH_NUM_WIDTH : u32 = 46;
+	enum GLYPH_NUM_HEIGHT : u32 = 7;
+
 	texLogo: gfx.Texture;
 	texWhite: gfx.Texture;
 	texWhiteArray: gfx.Texture;
@@ -354,9 +369,7 @@ public:
 
 		setupQuad();
 
-		mGrid = new tui.Grid(10, 3);
-
-		updateText("ZZZ");
+		mGrid = new tui.Grid(GLYPH_NUM_WIDTH, GLYPH_NUM_HEIGHT);
 	}
 
 	fn close()
@@ -392,10 +405,29 @@ public:
 		mGrid = null;
 	}
 
-	fn updateText(text: string)
+	fn renderPrepare()
 	{
+		s: text.StringSink;
 		mGrid.reset();
-		tui.makeButton(mGrid, 0, 0, 10, false, cast(immutable(u8)[])text);
+
+		tui.makeFrameSingle(mGrid, 0, 0, GLYPH_NUM_WIDTH, GLYPH_NUM_HEIGHT);
+		s.sink("FrameID: ");
+		text.vrt_format_i64(s.sink, gOpenXR.frameID);
+		tui.makeCenteredText(mGrid, 0, 1, GLYPH_NUM_WIDTH, s.borrowUnsafe());
+
+		foreach (i, ref view; gOpenXR.views) {
+			px := view.location.pose.position.x.prettyF32();
+			py := view.location.pose.position.y.prettyF32();
+			pz := view.location.pose.position.z.prettyF32();
+
+			ox := view.location.pose.orientation.x.prettyF32();
+			oy := view.location.pose.orientation.y.prettyF32();
+			oz := view.location.pose.orientation.z.prettyF32();
+			ow := view.location.pose.orientation.w.prettyF32();
+
+			str := new "x: ${px}, y: ${py}, z: ${pz}\nx: ${ox}, y: ${oy}, z: ${oz}, w: ${ow}";
+			tui.makeText(mGrid, 2, 2 + 2 * cast(i32)i, str);
+		}
 	}
 
 	fn renderView(target: gfx.Target, ref viewInfo: gfx.ViewInfo)

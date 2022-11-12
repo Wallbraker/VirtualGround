@@ -96,6 +96,11 @@ public:
 		camPosition = math.Point3f.opCall(0.0f, 1.6f, 0.0f);
 	}
 
+	override fn renderPrepare()
+	{
+		s.renderPrepare();
+	}
+
 	override fn renderView(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
 		if (mMode == Mode.Headless) {
@@ -119,8 +124,6 @@ public:
 
 	override fn updateActions(predictedDisplayTime: i64)
 	{
-		s.updateText(new "${gOpenXR.frameID}");
-
 		if (!.updateActions(ref gMoveActions, ref gGameplayActions, predictedDisplayTime)) {
 			core.get().quit(0);
 		}
