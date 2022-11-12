@@ -103,6 +103,7 @@ public:
 
 			mChain.setUpdateActions(chainUpdateActions);
 			mChain.setLogic(chainLogic);
+			mChain.setRenderPrepare(chainRenderPrepare);
 			mChain.setRenderView(chainRenderView);
 			mChain.setClose(chainClose);
 			mChain.setIdle(chainIdle);
@@ -119,6 +120,7 @@ public:
 			while (mRunning) {
 				oneLoop(
 				    ref gOpenXR,
+				    doRenderPrepare,
 				    doRenderView,
 				    doUpdateActions);
 			}
@@ -208,6 +210,11 @@ private:
 		updateActionsDg(predictedDisplayTime);
 	}
 
+	fn doRenderPrepare()
+	{
+		renderPrepareDg();
+	}
+
 	fn doRenderView(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
 		renderViewDg(t, ref viewInfo);
@@ -228,6 +235,7 @@ private:
 
 	fn chainUpdateActions(predictedDisplayTime: i64) { updateActionsDg(predictedDisplayTime); }
 	fn chainLogic() { logicDg(); }
+	fn chainRenderPrepare() { renderPrepareDg(); }
 
 	fn chainRenderView(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
@@ -914,6 +922,7 @@ fn startSession(ref oxr: OpenXR) bool
  */
 
 fn oneLoop(ref oxr: OpenXR,
+           renderPrepareDg: dg(),
            renderViewDg: dg(gfx.Target, ref gfx.ViewInfo),
            updateActionsDg: dg(XrTime)
            ) bool
@@ -980,8 +989,8 @@ fn oneLoop(ref oxr: OpenXR,
 		return false;
 	}
 
-	releaseInfo: XrSwapchainImageReleaseInfo;
-	releaseInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
+	// Prepare rendering once we have the positions.
+	renderPrepareDg();
 
 	depthViews: XrCompositionLayerDepthInfoKHR[2];
 	layerViews: XrCompositionLayerProjectionView[2];
@@ -1007,11 +1016,6 @@ fn oneLoop(ref oxr: OpenXR,
 		renderViewDg(target, ref viewInfo);
 
 		gfx.glCheckError();
-
-		xrReleaseSwapchainImage(view.swapchains.texture, &releaseInfo);
-		if (view.swapchains.depth) {
-			xrReleaseSwapchainImage(view.swapchains.depth, &releaseInfo);
-		}
 
 		view.current_index = 0xffff_ffff_u32;
 
@@ -1041,8 +1045,21 @@ fn oneLoop(ref oxr: OpenXR,
 		depthViews[i].farZ = 256.0;  // Hardcoded
 	}
 
+	// Release the swapchains here.
+	releaseInfo: XrSwapchainImageReleaseInfo;
+	releaseInfo.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
+
+	foreach (ref view; oxr.views) {
+		xrReleaseSwapchainImage(view.swapchains.texture, &releaseInfo);
+		if (view.swapchains.depth) {
+			xrReleaseSwapchainImage(view.swapchains.depth, &releaseInfo);
+		}
+	}
+
+	// Final error checking.
 	gfx.glCheckError();
 
+	// Submit the layers to the runtime.
 	layer: XrCompositionLayerProjection;
 	layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
 	layer.viewCount = cast(u32)layerViews.length;
