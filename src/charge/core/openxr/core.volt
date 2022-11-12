@@ -103,7 +103,7 @@ public:
 
 			mChain.setUpdateActions(chainUpdateActions);
 			mChain.setLogic(chainLogic);
-			mChain.setRender(chainRender);
+			mChain.setRenderView(chainRenderView);
 			mChain.setClose(chainClose);
 			mChain.setIdle(chainIdle);
 
@@ -117,7 +117,10 @@ public:
 			return mChain.loop();
 		} else {
 			while (mRunning) {
-				oneLoop(ref gOpenXR, doRender, doUpdateActions);
+				oneLoop(
+				    ref gOpenXR,
+				    doRenderView,
+				    doUpdateActions);
 			}
 
 			doClose();
@@ -205,9 +208,9 @@ private:
 		updateActionsDg(predictedDisplayTime);
 	}
 
-	fn doRender(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
+	fn doRenderView(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
-		renderDg(t, ref viewInfo);
+		renderViewDg(t, ref viewInfo);
 	}
 
 	fn doLog(str: string)
@@ -226,7 +229,7 @@ private:
 	fn chainUpdateActions(predictedDisplayTime: i64) { updateActionsDg(predictedDisplayTime); }
 	fn chainLogic() { logicDg(); }
 
-	fn chainRender(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
+	fn chainRenderView(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
 		time: XrTime;
 
@@ -244,7 +247,7 @@ private:
 
 		updateActionsDg(time);
 
-		renderDg(t, ref viewInfo);
+		renderViewDg(t, ref viewInfo);
 	}
 
 	fn chainClose() { doClose(); }
@@ -911,7 +914,7 @@ fn startSession(ref oxr: OpenXR) bool
  */
 
 fn oneLoop(ref oxr: OpenXR,
-           renderDg: dg(gfx.Target, ref gfx.ViewInfo),
+           renderViewDg: dg(gfx.Target, ref gfx.ViewInfo),
            updateActionsDg: dg(XrTime)
            ) bool
 {
@@ -1001,7 +1004,7 @@ fn oneLoop(ref oxr: OpenXR,
 		gfx.glCheckError();
 
 		// This is where we render!
-		renderDg(target, ref viewInfo);
+		renderViewDg(target, ref viewInfo);
 
 		gfx.glCheckError();
 

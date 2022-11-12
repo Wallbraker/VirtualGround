@@ -96,7 +96,7 @@ public:
 		camPosition = math.Point3f.opCall(0.0f, 1.6f, 0.0f);
 	}
 
-	override fn render(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
+	override fn renderView(t: gfx.Target, ref viewInfo: gfx.ViewInfo)
 	{
 		if (mMode == Mode.Headless) {
 			viewInfo.ensureValidFov(85, t);
