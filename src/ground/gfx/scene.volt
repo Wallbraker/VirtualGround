@@ -45,6 +45,40 @@ struct Pose
 	pos: math.Point3f;
 };
 
+global iGreen : immutable math.Color4b = {50, 200, 50, 255};
+global iRed : immutable math.Color4b = {200, 50, 50, 255};
+
+enum FrustumVertsNum = 24;
+
+global gFrustumVerts : immutable immutable(math.Point3f)[FrustumVertsNum] = [
+	{ 1.0f,  1.0f,  1.0f},
+	{ 1.0f,  1.0f, -1.0f},
+	{ 1.0f, -1.0f,  1.0f},
+	{ 1.0f, -1.0f, -1.0f},
+	{-1.0f,  1.0f,  1.0f},
+	{-1.0f,  1.0f, -1.0f},
+	{-1.0f, -1.0f,  1.0f},
+	{-1.0f, -1.0f, -1.0f},
+
+	{ 1.0f,  1.0f,  1.0f},
+	{ 1.0f, -1.0f,  1.0f},
+	{-1.0f,  1.0f,  1.0f},
+	{-1.0f, -1.0f,  1.0f},
+	{ 1.0f,  1.0f,  1.0f},
+	{-1.0f,  1.0f,  1.0f},
+	{ 1.0f, -1.0f,  1.0f},
+	{-1.0f, -1.0f,  1.0f},
+
+	{ 1.0f,  1.0f, -1.0f},
+	{ 1.0f, -1.0f, -1.0f},
+	{-1.0f,  1.0f, -1.0f},
+	{-1.0f, -1.0f, -1.0f},
+	{ 1.0f,  1.0f, -1.0f},
+	{-1.0f,  1.0f, -1.0f},
+	{ 1.0f, -1.0f, -1.0f},
+	{-1.0f, -1.0f, -1.0f},
+];
+
 global gViewSpace: Pose;
 global gGroundObj: VoxelObject;
 global gPsMvBall: VoxelObject[2];
@@ -52,7 +86,38 @@ global gStaticModels: VoxelObject[2];
 global gPsMvComplete: VoxelObject[2];
 global gPsMvControllerOnly: VoxelObject[2];
 global gAxis: VoxelObject[16];
+global gFrustums: VoxelObject[8];
 global gChunks: VoxelObject[1024];
+
+fn setupLines()
+{
+	blue: const(math.Color4b)  = {0, 0, 255, 255};
+
+	d := 1.0f;
+
+	vb := new VoxelBufferBuilder();
+	// No quads
+	vb.switchToLines();
+	foreach (ref v; gFrustumVerts) {
+		vb.addLineVertex(v.x, v.y, v.z, blue);
+	}
+
+	foreach (i, ref obj; gFrustums) {
+		buf := VoxelBuffer.make(new "ground/voxel/frustum_${i}", vb);
+
+		reference(ref obj.buf, buf);
+
+		obj.active = false;
+		obj.rot = math.Quatf.opCall(1.0f, 0.0f, 0.0f, 0.0f);
+		obj.rot.normalize();
+		obj.scale = math.Vector3f.opCall(1.0f, 1.0f, 1.0f);
+		obj.origin = math.Point3f.opCall(0.0f, 0.0f, 0.0f);
+
+		reference(ref buf, null);
+	}
+
+	vb.close();
+}
 
 fn setupAxis()
 {
@@ -351,6 +416,7 @@ public:
 		fXW := 20.0f;
 		fZH := 20.0f;
 
+		setupLines();
 		setupAxis();
 		setupGround();
 		setupPsMvs();
@@ -386,6 +452,9 @@ public:
 		foreach (ref complete; gPsMvComplete) {
 			complete.close();
 		}
+		foreach (ref frustum; gFrustums) {
+			frustum.close();
+		}
 		foreach (ref axis; gAxis) {
 			axis.close();
 		}
@@ -415,6 +484,8 @@ public:
 		text.vrt_format_i64(s.sink, gOpenXR.frameID);
 		tui.makeCenteredText(mGrid, 0, 1, GLYPH_NUM_WIDTH, s.borrowUnsafe());
 
+		verts: VoxelBufferBuilder.LineVertex[FrustumVertsNum];
+
 		foreach (i, ref view; gOpenXR.views) {
 			pos := view.location.position;
 			px := pos.x.prettyF32();
@@ -429,6 +500,33 @@ public:
 
 			str := new "x: ${px}, y: ${py}, z: ${pz}\nx: ${ox}, y: ${oy}, z: ${oz}, w: ${ow}";
 			tui.makeText(mGrid, 2, 2 + 2 * cast(i32)i, str);
+
+			// Don't draw fov in non-headless mode.
+			if (!gOpenXR.headless) {
+				continue;
+			}
+
+			fov := view.location.fov;
+
+			p: math.Matrix4x4d;
+			p.setToFrustum(ref fov, 0.1, 1.0);
+			p.inverse();
+
+			foreach (k, ref vert; verts) {
+				t := p / gFrustumVerts[k];
+
+				vert.x = t.x;
+				vert.y = t.y;
+				vert.z = t.z;
+				vert.color = i % 2 == 1 ? iGreen : iRed;
+			}
+
+			gFrustums[i].active = true;
+			gFrustums[i].pos = pos;
+			gFrustums[i].rot = ori;
+
+			arr := cast(void[])verts[];
+			glNamedBufferData(gFrustums[i].buf.buf, cast(GLsizeiptr)arr.length, arr.ptr, GL_STATIC_DRAW);
 		}
 	}
 
@@ -467,6 +565,9 @@ public:
 		}
 		foreach (ref complete; gPsMvComplete) {
 			if (complete.active) { objs[count++] = &complete; }
+		}
+		foreach (ref frustum; gFrustums) {
+			if (frustum.active) { objs[count++] = &frustum; }
 		}
 		foreach (ref axis; gAxis) {
 			if (axis.active) { objs[count++] = &axis; }
