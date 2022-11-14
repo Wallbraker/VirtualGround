@@ -254,6 +254,7 @@ private:
 		}
 
 		updateActionsDg(time);
+		getViewLocation(ref gOpenXR, time);
 
 		renderViewDg(t, ref viewInfo);
 	}
