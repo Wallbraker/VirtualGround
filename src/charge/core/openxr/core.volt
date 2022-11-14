@@ -1000,9 +1000,9 @@ fn oneLoop(ref oxr: OpenXR,
 		viewInfo: gfx.ViewInfo;
 		viewInfo.validFov = true;
 		viewInfo.validLocation = true;
-		viewInfo.fov = *cast(math.Fovf*)&view.location.fov;
-		viewInfo.position = *cast(math.Point3f*)&view.location.pose.position;
-		viewInfo.rotation = *cast(math.Quatf*)&view.location.pose.orientation;
+		viewInfo.fov = view.location.fov;
+		viewInfo.position = view.location.position;
+		viewInfo.rotation = view.location.orientation;
 
 		gfx.glCheckError();
 
@@ -1020,8 +1020,8 @@ fn oneLoop(ref oxr: OpenXR,
 		view.current_index = 0xffff_ffff_u32;
 
 		layerViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-		layerViews[i].pose = view.location.pose;
-		layerViews[i].fov = view.location.fov;
+		layerViews[i].pose = view.location.oxr.pose;
+		layerViews[i].fov = view.location.oxr.fov;
 		layerViews[i].subImage.swapchain = view.swapchains.texture;
 		layerViews[i].subImage.imageRect.offset.x = 0;
 		layerViews[i].subImage.imageRect.offset.y = 0;
@@ -1199,7 +1199,7 @@ fn getViewLocation(ref oxr: OpenXR, predictedDisplayTime: XrTime) XrResult
 	}
 
 	foreach (i, ref view; oxr.views) {
-		view.location = views[i];
+		view.location.oxr = views[i];
 	}
 
 	return XR_SUCCESS;

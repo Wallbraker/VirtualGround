@@ -416,14 +416,16 @@ public:
 		tui.makeCenteredText(mGrid, 0, 1, GLYPH_NUM_WIDTH, s.borrowUnsafe());
 
 		foreach (i, ref view; gOpenXR.views) {
-			px := view.location.pose.position.x.prettyF32();
-			py := view.location.pose.position.y.prettyF32();
-			pz := view.location.pose.position.z.prettyF32();
+			pos := view.location.position;
+			px := pos.x.prettyF32();
+			py := pos.y.prettyF32();
+			pz := pos.z.prettyF32();
 
-			ox := view.location.pose.orientation.x.prettyF32();
-			oy := view.location.pose.orientation.y.prettyF32();
-			oz := view.location.pose.orientation.z.prettyF32();
-			ow := view.location.pose.orientation.w.prettyF32();
+			ori := view.location.orientation;
+			ox := ori.x.prettyF32();
+			oy := ori.y.prettyF32();
+			oz := ori.z.prettyF32();
+			ow := ori.w.prettyF32();
 
 			str := new "x: ${px}, y: ${py}, z: ${pz}\nx: ${ox}, y: ${oy}, z: ${oz}, w: ${ow}";
 			tui.makeText(mGrid, 2, 2 + 2 * cast(i32)i, str);

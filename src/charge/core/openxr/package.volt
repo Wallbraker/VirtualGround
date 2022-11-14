@@ -11,6 +11,7 @@ import amp.openxr;
 import lib.gl.gl45;
 
 import gfx = charge.gfx;
+import math = charge.math;
 import charge.core.openxr.enumerate;
 
 
@@ -97,6 +98,19 @@ public:
  */
 struct View
 {
+	static struct Location
+	{
+		oxr: XrView;
+
+		@property fn orientation() math.Quatf { return *cast(math.Quatf*)&this.oxr.pose.orientation; }
+		@property fn position() math.Point3f { return *cast(math.Point3f*)&this.oxr.pose.position; }
+		@property fn fov() math.Fovf { return *cast(math.Fovf*)&this.oxr.fov; }
+	};
+
+	location: Location;
+
+	// The rest are only valid if not headless
+
 	width, height: uint;
 
 	static struct Swapchains
@@ -106,8 +120,6 @@ struct View
 	}
 
 	swapchains: Swapchains;
-
-	location: XrView;
 
 	current_index: u32;
 	textures: GLuint[];
