@@ -541,18 +541,6 @@ public:
 		vp: math.Matrix4x4d;
 		vp.setToMultiply(ref proj, ref view);
 
-		if (gOpenXR.overlay || gOpenXR.ar) {
-			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		} else {
-			glClearColor(0.6f, 0.6f, 1.0f, 1.0f);
-		}
-
-		glClearDepth(1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-		glBindSampler(0, voxelSampler);
-		glLineWidth(2.0f);
-
 		objs: VoxelObject*[1024];
 		count: u32;
 
@@ -581,13 +569,33 @@ public:
 			}
 		}
 
+		// Common state.
+		if (gOpenXR.overlay || gOpenXR.ar) {
+			glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		} else {
+			glClearColor(0.6f, 0.6f, 1.0f, 1.0f);
+		}
+		glClearDepth(1.0f);
+		glEnable(GL_DEPTH_TEST);
+
+		// Clear the targets.
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Draw quads first.
+		glBindSampler(0, voxelSampler);
 		drawVoxelQuads(ref vp, objs[0 .. count]);
-		drawVoxelLines(ref vp, objs[0 .. count]);
 
-		glLineWidth(1.0f);
-
+		// Draw text before lines to get correct blending.
+		glBindSampler(0, voxelSampler); // Reuse sampler.
 		drawText(target, ref vp);
 
+		// Draw lines last to get correct blending.
+		glBindSampler(0, voxelSampler);
+		glLineWidth(2.0f);
+		drawVoxelLines(ref vp, objs[0 .. count]);
+		glLineWidth(1.0f);
+
+		// Clean up state.
 		glBindSampler(0, 0);
 		glDisable(GL_DEPTH_TEST);
 
