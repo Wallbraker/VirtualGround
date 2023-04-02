@@ -147,6 +147,12 @@ fn enumViews(ref oxr: OpenXR, predictedDisplayTime: XrTime, ref views: XrView[32
 	}
 
 	viewCapacityInput := cast(u32)views.length;
+
+	// Must be set.
+	foreach (ref view; views[0 .. viewCapacityInput]) {
+		view.type = XR_TYPE_VIEW;
+	}
+
 	ret = xrLocateViews(oxr.session, &viewLocateInfo, &viewState, viewCapacityInput, &viewCountOutput, views.ptr);
 	if (ret != XR_SUCCESS) {
 		oxr.log("xrLocateViews failed");
