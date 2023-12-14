@@ -987,8 +987,8 @@ fn oneLoop(ref oxr: OpenXR,
 	if (!shouldRender) {
 		// Swapchains are now ready, signal that we are starting to render.
 		ret = xrBeginFrame(oxr.session, null);
-		if (ret != XR_SUCCESS) {
-			oxr.log("xrBeginFrame failed!");
+		if (ret != XR_SUCCESS && ret != XR_FRAME_DISCARDED) {
+			oxr.log("xrBeginFrame failed (shouldRender == false)!");
 			return false;
 		}
 
@@ -1006,8 +1006,8 @@ fn oneLoop(ref oxr: OpenXR,
 
 	// Swapchains are now ready, signal that we are starting to render.
 	ret = xrBeginFrame(oxr.session, null);
-	if (ret != XR_SUCCESS) {
-		oxr.log("xrBeginFrame failed!");
+	if (ret != XR_SUCCESS && ret != XR_FRAME_DISCARDED) {
+		oxr.log("xrBeginFrame failed (shouldRender == true)!");
 		return false;
 	}
 
