@@ -253,6 +253,9 @@ private:
 			xrConvertWin32PerformanceCounterToTimeKHR(gOpenXR.instance, &value, &time);
 		}
 
+		// Make sure to drain the event queue on headless as well.
+		pollEvents(ref gOpenXR);
+
 		updateActionsDg(time);
 		getViewLocation(ref gOpenXR, gOpenXR.stageSpace, time);
 
