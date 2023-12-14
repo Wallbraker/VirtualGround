@@ -122,7 +122,7 @@ fn enumSwapchainImages(ref oxr: OpenXR, handle: XrSwapchain, out outTextures: GL
 }
 
 
-fn enumViews(ref oxr: OpenXR, predictedDisplayTime: XrTime, ref views: XrView[32]) XrResult
+fn enumViews(ref oxr: OpenXR, baseSpace: XrSpace, predictedDisplayTime: XrTime, ref views: XrView[32]) XrResult
 {
 	ret: XrResult;
 
@@ -130,7 +130,7 @@ fn enumViews(ref oxr: OpenXR, predictedDisplayTime: XrTime, ref views: XrView[32
 	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
 	viewLocateInfo.viewConfigurationType = oxr.viewConfigType;
 	viewLocateInfo.displayTime = predictedDisplayTime;
-	viewLocateInfo.space = oxr.stageSpace;
+	viewLocateInfo.space = baseSpace;
 
 	viewState: XrViewState;
 	viewState.type = XR_TYPE_VIEW_STATE;

@@ -254,7 +254,7 @@ private:
 		}
 
 		updateActionsDg(time);
-		getViewLocation(ref gOpenXR, time);
+		getViewLocation(ref gOpenXR, gOpenXR.stageSpace, time);
 
 		renderViewDg(t, ref viewInfo);
 	}
@@ -313,6 +313,7 @@ fn initOpenXRAndEGL(ref oxr: OpenXR, ref egl: egl.EGL, mode: Mode) bool
 	       oxr.createInstanceEGL() &&
 	       .egl.initEGL(ref egl) &&
 	       oxr.createSessionEGL(ref egl) &&
+	       oxr.createSpaces() &&
 	       oxr.createViewsGL() &&
 	       oxr.startSession();
 }
@@ -327,6 +328,7 @@ version (Windows) fn initOpenXRAndWGL(ref oxr: OpenXR, ref wgl: wgl.WGL, mode: M
 	       oxr.createInstanceWGL() &&
 	       .wgl.initWGL(ref wgl) &&
 	       oxr.createSessionWGL(ref wgl) &&
+	       oxr.createSpaces() &&
 	       oxr.createViewsGL() &&
 	       oxr.startSession();
 }
@@ -339,6 +341,7 @@ fn initOpenXRHeadless(ref oxr: OpenXR, mode: Mode) bool
 	       oxr.findExtensions() &&
 	       oxr.createInstanceHeadless() &&
 	       oxr.createSessionHeadless() &&
+	       oxr.createSpaces() &&
 	       oxr.createViewsHeadless() &&
 	       oxr.startSession();
 }
@@ -413,22 +416,6 @@ fn findExtensions(ref oxr: OpenXR) bool
 			break;
 		default:
 		}
-	}
-
-	return true;
-}
-
-fn createReferenceSpace(ref oxr: OpenXR, type: XrReferenceSpaceType, out space: XrSpace) bool
-{
-	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
-	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
-	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
-	referenceSpaceCreateInfo.referenceSpaceType = type;
-
-	ret := xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &space);
-	if (ret != XR_SUCCESS) {
-		oxr.log("xrCreateReferenceSpace failed!");
-		return false;
 	}
 
 	return true;
@@ -521,11 +508,6 @@ fn createSessionHeadless(ref oxr: OpenXR) bool
 	ret = xrCreateSession(oxr.instance, &createInfo, &oxr.session);
 	if (ret != XR_SUCCESS) {
 		oxr.log("xrCreateSession failed!");
-		return false;
-	}
-
-	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
-	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
 		return false;
 	}
 
@@ -674,11 +656,6 @@ fn createSessionEGL(ref oxr: OpenXR, ref egl: egl.EGL) bool
 		return false;
 	}
 
-	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
-	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
-		return false;
-	}
-
 	return true;
 }
 
@@ -796,11 +773,6 @@ version (Windows) fn createSessionWGL(ref oxr: OpenXR, ref wgl: wgl.WGL) bool
 		return false;
 	}
 
-	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
-	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
-		return false;
-	}
-
 	return true;
 }
 
@@ -898,6 +870,32 @@ fn createViewsGL(ref oxr: OpenXR) bool
 	return true;
 }
 
+fn createReferenceSpace(ref oxr: OpenXR, type: XrReferenceSpaceType, out space: XrSpace) bool
+{
+	referenceSpaceCreateInfo: XrReferenceSpaceCreateInfo;
+	referenceSpaceCreateInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
+	referenceSpaceCreateInfo.poseInReferenceSpace.orientation.w = 1.0f;
+	referenceSpaceCreateInfo.referenceSpaceType = type;
+
+	ret := xrCreateReferenceSpace(oxr.session, &referenceSpaceCreateInfo, &space);
+	if (ret != XR_SUCCESS) {
+		oxr.log("xrCreateReferenceSpace failed!");
+		return false;
+	}
+
+	return true;
+}
+
+fn createSpaces(ref oxr: OpenXR) bool
+{
+	if (!oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_STAGE, out oxr.stageSpace) ||
+	    !oxr.createReferenceSpace(XR_REFERENCE_SPACE_TYPE_VIEW, out oxr.viewSpace)) {
+		return false;
+	}
+
+	return true;
+}
+
 fn startSession(ref oxr: OpenXR) bool
 {
 	ret: XrResult;
@@ -984,7 +982,7 @@ fn oneLoop(ref oxr: OpenXR,
 		oxr.acquireAndWaitViewImage(ref view);
 	}
 
-	ret = oxr.getViewLocation(predictedDisplayTime);
+	ret = oxr.getViewLocation(oxr.stageSpace, predictedDisplayTime);
 	if (ret != XR_SUCCESS) {
 		// Already logged.
 		return false;
@@ -1188,12 +1186,12 @@ fn acquireAndWaitViewImage(ref oxr: OpenXR, ref view: View) XrResult
 	return XR_SUCCESS;
 }
 
-fn getViewLocation(ref oxr: OpenXR, predictedDisplayTime: XrTime) XrResult
+fn getViewLocation(ref oxr: OpenXR, baseSpace: XrSpace, predictedDisplayTime: XrTime) XrResult
 {
 	ret: XrResult;
 	views: XrView[32];
 
-	ret = enumViews(ref oxr, predictedDisplayTime, ref views);
+	ret = enumViews(ref oxr, baseSpace, predictedDisplayTime, ref views);
 	if (ret != XR_SUCCESS) {
 		// Already logged.
 		return ret;

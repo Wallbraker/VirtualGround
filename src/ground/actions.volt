@@ -146,6 +146,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 
 	ret: XrResult;
 	paths: XrPath[2];
+	baseSpace := gOpenXR.stageSpace;
 	xrStringToPath(gOpenXR.instance, "/user/hand/left", &paths[0]);
 	xrStringToPath(gOpenXR.instance, "/user/hand/right", &paths[1]);
 
@@ -156,7 +157,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 			continue;
 		}
 
-		ret = xrLocateSpace(move.ballSpace[hand], gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
+		ret = xrLocateSpace(move.ballSpace[hand], baseSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvBall[hand].active = false;
 			continue;
@@ -173,7 +174,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 			continue;
 		}
 
-		ret = xrLocateSpace(gameplay.gripSpace[hand], gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
+		ret = xrLocateSpace(gameplay.gripSpace[hand], baseSpace, predictedDisplayTime, &spaceLocation);
 		if (ret != XR_SUCCESS) {
 			gPsMvComplete[hand].active = false;
 			gPsMvControllerOnly[hand].active = false;
@@ -191,7 +192,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 		gOpenXR.quadHack.active = shouldShowQuad;
 	}
 
-	ret = xrLocateSpace(gOpenXR.viewSpace, gOpenXR.stageSpace, predictedDisplayTime, &spaceLocation);
+	ret = xrLocateSpace(gOpenXR.viewSpace, baseSpace, predictedDisplayTime, &spaceLocation);
 	if (ret == XR_SUCCESS) {
 		gViewSpace.pos = *cast(math.Point3f*) &spaceLocation.pose.position;
 		gViewSpace.rot = *cast(math.Quatf*) &spaceLocation.pose.orientation;
@@ -208,7 +209,7 @@ fn updateActions(ref move: MoveActions, ref gameplay: GameplayActions, predicted
 	}
 
 	views: XrView[32];
-	ret = enumViews(ref gOpenXR, predictedDisplayTime, ref views);
+	ret = enumViews(ref gOpenXR, baseSpace, predictedDisplayTime, ref views);
 	if (ret == XR_SUCCESS) {
 		foreach (i, ref view; gOpenXR.views) {
 			gAxis[i].active = true;
