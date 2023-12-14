@@ -53,6 +53,11 @@ RUN battery config Volta Watt Charge VirtualGround && \
     cp VirtualGround/virtualground VirtualGround/res/appimage/VirtualGround && \
     appimagetool-x86_64.AppImage --appimage-extract-and-run VirtualGround/res/appimage
 
+COPY describe.sh /root/volt/describe.sh
+RUN \
+	/root/volt/describe.sh && \
+	echo Done
+
 WORKDIR $HOME
 
 ENTRYPOINT ["/bin/bash"]
