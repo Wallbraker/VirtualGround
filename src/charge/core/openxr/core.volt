@@ -405,20 +405,69 @@ fn findExtensions(ref oxr: OpenXR) bool
 		case "XR_KHR_win32_convert_performance_counter_time":
 			oxr.have.XR_KHR_win32_convert_performance_counter_time = true;
 			break;
-		case "XR_MND_headless":
-			oxr.have.XR_MND_headless = true;
-			break;
-		case "XR_MNDX_egl_enable":
-			oxr.have.XR_MNDX_egl_enable = true;
+		case "XR_EXT_local_floor":
+			oxr.have.XR_EXT_local_floor = true;
 			break;
 		case "XR_EXTX_overlay":
 			oxr.have.XR_EXTX_overlay = true;
+			break;
+		case "XR_MND_headless":
+			oxr.have.XR_MND_headless = true;
+			break;
+		case "XR_MNDX_ball_on_a_stick_controller":
+			oxr.have.XR_MNDX_ball_on_a_stick_controller = true;
+			break;
+		case "XR_MNDX_egl_enable":
+			oxr.have.XR_MNDX_egl_enable = true;
 			break;
 		default:
 		}
 	}
 
 	return true;
+}
+
+fn addCommonExts(ref oxr: OpenXR,
+                 ref exts: const(char)*[],
+                 wantsDepth: bool,
+                 wantsOverlay: bool)
+{
+	if (oxr.have.XR_KHR_composition_layer_depth && wantsDepth) {
+		exts ~= "XR_KHR_composition_layer_depth".ptr;
+	}
+
+	if (oxr.have.XR_EXT_local_floor) {
+		exts ~= "XR_EXT_local_floor".ptr;
+	}
+
+	if (oxr.have.XR_MNDX_ball_on_a_stick_controller) {
+		exts ~= "XR_MNDX_ball_on_a_stick_controller".ptr;
+	}
+
+	if (oxr.have.XR_EXTX_overlay && wantsOverlay) {
+		exts ~= "XR_EXTX_overlay".ptr;
+	}
+}
+
+fn enableCommonExts(ref oxr: OpenXR,
+                    wantsDepth: bool,
+                    wantsOverlay: bool)
+{
+	if (oxr.have.XR_KHR_composition_layer_depth && wantsDepth) {
+		oxr.enabled.XR_KHR_composition_layer_depth = true;
+	}
+
+	if (oxr.have.XR_EXT_local_floor) {
+		oxr.enabled.XR_EXT_local_floor = true;
+	}
+
+	if (oxr.have.XR_MNDX_ball_on_a_stick_controller) {
+		oxr.enabled.XR_MNDX_ball_on_a_stick_controller = true;
+	}
+
+	if (oxr.have.XR_EXTX_overlay && wantsOverlay) {
+		oxr.enabled.XR_EXTX_overlay = true;
+	}
 }
 
 fn createInstanceHeadless(ref oxr: OpenXR) bool
@@ -440,16 +489,17 @@ fn createInstanceHeadless(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	version (Posix) exts: const(char)*[2] = [
+	version (Posix) exts: const(char)*[] = [
 		"XR_KHR_convert_timespec_time".ptr,
 		"XR_MND_headless".ptr,
 	];
 
-	version (Windows) exts: const(char)*[2] = [
+	version (Windows) exts: const(char)*[] = [
 		"XR_KHR_win32_convert_performance_counter_time".ptr,
 		"XR_MND_headless".ptr,
 	];
 
+	oxr.addCommonExts(exts: ref exts, wantsOverlay: false, wantsDepth: false);
 
 	createInfo: XrInstanceCreateInfo;
 	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
@@ -558,15 +608,8 @@ fn createInstanceEGL(ref oxr: OpenXR) bool
 		"XR_MNDX_egl_enable".ptr,
 	];
 
-	depth: bool = oxr.have.XR_KHR_composition_layer_depth;
-	if (depth) {
-		exts ~= "XR_KHR_composition_layer_depth".ptr;
-	}
-
-	overlay: bool = oxr.have.XR_EXTX_overlay && oxr.mode == Mode.Overlay;
-	if (overlay) {
-		exts ~= "XR_EXTX_overlay".ptr;
-	}
+	wantsOverlay: bool = oxr.mode == Mode.Overlay;
+	oxr.addCommonExts(exts: ref exts, wantsOverlay: wantsOverlay, wantsDepth: true);
 
 	createInfo: XrInstanceCreateInfo;
 	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
@@ -584,11 +627,10 @@ fn createInstanceEGL(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	oxr.enabled.XR_KHR_composition_layer_depth = depth;
 	oxr.enabled.XR_KHR_convert_timespec_time = true;
-	oxr.enabled.XR_KHR_opengl_enable = true;
 	oxr.enabled.XR_MND_headless = true;
-	oxr.enabled.XR_EXTX_overlay = overlay;
+	oxr.enabled.XR_MNDX_egl_enable = true;
+	oxr.enableCommonExts(wantsOverlay: wantsOverlay, wantsDepth: true);
 
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
@@ -678,15 +720,8 @@ version (Windows) fn createInstanceWGL(ref oxr: OpenXR) bool
 		"XR_KHR_win32_convert_performance_counter_time".ptr,
 	];
 
-	depth: bool = oxr.have.XR_KHR_composition_layer_depth;
-	if (depth) {
-		exts ~= "XR_KHR_composition_layer_depth".ptr;
-	}
-
-	overlay: bool = oxr.have.XR_EXTX_overlay && oxr.mode == Mode.Overlay;
-	if (overlay) {
-		exts ~= "XR_EXTX_overlay".ptr;
-	}
+	wantsOverlay: bool = oxr.mode == Mode.Overlay;
+	oxr.addCommonExts(exts: ref exts, wantsOverlay: wantsOverlay, wantsDepth: true);
 
 	createInfo: XrInstanceCreateInfo;
 	createInfo.type = XR_TYPE_INSTANCE_CREATE_INFO;
@@ -704,10 +739,9 @@ version (Windows) fn createInstanceWGL(ref oxr: OpenXR) bool
 		return false;
 	}
 
-	oxr.enabled.XR_KHR_composition_layer_depth = depth;
 	oxr.enabled.XR_KHR_opengl_enable = true;
 	oxr.enabled.XR_KHR_win32_convert_performance_counter_time = true;
-	oxr.enabled.XR_EXTX_overlay = overlay;
+	oxr.enableCommonExts(wantsOverlay: wantsOverlay, wantsDepth: true);
 
 	// Also load functions for this instance.
 	loadInstanceFunctions(oxr.instance);
