@@ -1,6 +1,6 @@
-# Copyright 2023, Collabora, Ltd.
-# SPDX-License-Identifier: BSL-1.0
-
+#!/usr/bin/bash
+# SPDX-FileCopyrightText: 2023 Collabora, Ltd.
+# SPDX-License-Identifier: CC0-1.0
 
 echo -n "Volta: "
 GIT_DIR=/root/volt/Volta/.git git describe --always --tags

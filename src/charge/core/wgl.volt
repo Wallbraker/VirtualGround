@@ -1,6 +1,6 @@
 // Copyright 2011-2019, Jakob Bornecrantz.
-// Copyright 2019-2022, Collabora, Ltd.
-// SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
+// Copyright 2019-2023, Collabora, Ltd.
+// SPDX-License-Identifier: MIT OR Apache-2.0 OR BSL-1.0
 /*!
  * @brief  Chunk of code that creates a EGL display and GL context.
  * @author Jakob Bornecrantz <jakob@collabora.com>

@@ -1,5 +1,5 @@
-// Copyright 2019-2022, Collabora, Ltd.
-// SPDX-License-Identifier: BSL-1.0 or Apache-2.0
+// Copyright 2019-2023, Collabora, Ltd.
+// SPDX-License-Identifier: MIT OR Apache-2.0 OR BSL-1.0
 /*!
  * @brief  Loader functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>

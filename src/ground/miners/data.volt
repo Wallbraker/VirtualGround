@@ -1,5 +1,5 @@
-// Copyright 2020, Collabora, Ltd.
-// SPDX-License-Identifier: BSL-1.0 or GPL-2.0-only
+// Copyright 2020-2023, Collabora, Ltd.
+// SPDX-License-Identifier: MIT OR Apache-2.0 OR BSL-1.0
 /*!
  * @brief  Data descriptions.
  * @author Jakob Bornecrantz <jakob@collabora.com>

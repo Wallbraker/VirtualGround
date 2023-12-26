@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2023 Collabora, Ltd.
+# SPDX-License-Identifier: CC0-1.0
 FROM ubuntu:20.04
 
 MAINTAINER Jakob Bornecrantz <jakob@collabora.com>
